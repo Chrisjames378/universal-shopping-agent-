@@ -56,7 +56,11 @@ export default function SubscriptionManager() {
       setError(null);
     } catch (err: any) {
       console.error("Error fetching subscription state:", err);
-      setError(err.message || "Endpoint error - is your server container alive?");
+      // Only set error if we've failed multiple times or it's a persistent issue
+      // to avoid flashing errors during dev server restarts
+      if (err.name !== "TypeError" || !err.message.includes("Failed to fetch")) {
+        setError(err.message || "Endpoint error - is your server container alive?");
+      }
     } finally {
       setLoading(false);
     }
