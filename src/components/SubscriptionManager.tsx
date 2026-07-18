@@ -90,7 +90,7 @@ export default function SubscriptionManager() {
         ));
 
       if (isTransient) {
-        console.warn("Subscription state fetch failed (server starting/restarting):", err.message);
+        console.log("Subscription state fetch failed (server starting/restarting):", err.message);
       } else {
         console.error("Error fetching subscription state:", err);
         setError(err.message || "Endpoint error - is your server container alive?");

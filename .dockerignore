@@ -4,3 +4,5 @@ dist/
 .git/
 .gcloudignore
 .dockerignore
+bun.lock
+bun.lockb
