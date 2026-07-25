@@ -1,8 +1,8 @@
 {
-  "name": "universal-shopping-agent",
+  "name": "universal-agent-architect",
   "private": true,
   "version": "0.0.1",
-  "description": "Autonomous shopping and web action agent",
+  "description": "Interactive report, emulation suite, and AI brain platform for high-fidelity browser agent engineering.",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
