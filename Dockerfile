@@ -1,17 +1,14 @@
-FROM node:20-slim AS base
+FROM node:20-bookworm-slim AS builder
 WORKDIR /app
-
-# Install dependencies
 COPY package*.json ./
 RUN npm install
-
-# Copy the rest of the application code
 COPY . .
-
-# Build the application
 RUN npm run build
 
+FROM node:20-bookworm-slim AS runner
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --omit=dev
+COPY --from=builder /app/dist ./dist
 EXPOSE 3000
-
-# Start the application
-CMD ["npm", "start"]
+CMD ["node", "dist/server.cjs"]
