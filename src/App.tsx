@@ -19,6 +19,7 @@ import {
   AlertOctagon,
   Lightbulb
 } from "lucide-react";
+import { Analytics } from '@vercel/analytics/react';
 
 import MetricCard from "./components/MetricCard";
 import OrchestrationLoop from "./components/OrchestrationLoop";
@@ -342,6 +343,9 @@ export default function App() {
 
       {/* Floating Chief Architect Chat widget */}
       <ArchitectChat />
+
+      {/* Vercel Web Analytics */}
+      <Analytics />
 
     </div>
   );
