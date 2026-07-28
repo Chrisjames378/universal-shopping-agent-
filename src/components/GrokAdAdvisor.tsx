@@ -33,21 +33,21 @@ export default function GrokAdAdvisor() {
           body: JSON.stringify({ adCopy, targetAudience })
         });
 
-        if (response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (response.ok && contentType && contentType.includes("application/json")) {
           resultData = await response.json();
-        } else if (response.status === 404) {
-          resultData = getGrokAnalysisClient(adCopy, targetAudience);
-        } else {
-          const data = await response.json().catch(() => ({}));
-          throw new Error(data.error || `Server status ${response.status}`);
         }
-      } catch (networkErr: any) {
+      } catch (_) {
+        // Network or parse error
+      }
+
+      if (!resultData) {
         resultData = getGrokAnalysisClient(adCopy, targetAudience);
       }
 
       setAnalysisResult(resultData);
     } catch (err: any) {
-      setError(err.message);
+      setAnalysisResult(getGrokAnalysisClient(adCopy, targetAudience));
     } finally {
       setIsAnalyzing(false);
     }

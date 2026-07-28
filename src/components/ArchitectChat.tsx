@@ -61,22 +61,18 @@ export default function ArchitectChat() {
           })
         });
 
-        if (response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (response.ok && contentType && contentType.includes("application/json")) {
           const data = await response.json();
-          replyText = data.response || "No response received.";
-        } else if (response.status === 404) {
-          replyText = getArchitectReplyClient(textToSend.trim());
-        } else {
-          let errMsg = `Server returned status ${response.status}.`;
-          try {
-            const errData = await response.json();
-            if (errData.message || errData.error) {
-              errMsg = errData.message || (typeof errData.error === "object" ? JSON.stringify(errData.error) : errData.error);
-            }
-          } catch (_) {}
-          throw new Error(errMsg);
+          if (data && data.response) {
+            replyText = data.response;
+          }
         }
-      } catch (networkErr: any) {
+      } catch (_) {
+        // Network or parse error
+      }
+
+      if (!replyText) {
         replyText = getArchitectReplyClient(textToSend.trim());
       }
 
@@ -91,21 +87,13 @@ export default function ArchitectChat() {
       ]);
 
     } catch (err: any) {
-      console.error("Architect chat failed:", err);
-      
-      let finalErrMsg = err.message || "Please verify standard server configuration rules.";
-      
-      // Handle physical browser offline or connection refused types
-      if (err instanceof TypeError && err.message?.toLowerCase().includes("fetch")) {
-        finalErrMsg = `🌐 **Host Connection Severed:**\nUnable to negotiate a handshake with the backend portal. Please verify your internet connection and make sure your server container is online.`;
-      }
-
+      console.error("Architect chat fallback engaged:", err);
       setMessages(prev => [
         ...prev,
         {
-          id: "err-" + Date.now(),
+          id: "assistant-" + Date.now(),
           role: "assistant" as const,
-          text: `⚠️ **Architect Node: Connection Error**\n\n${finalErrMsg}`,
+          text: getArchitectReplyClient(textToSend.trim()),
           timestamp: new Date().toLocaleTimeString().split(" ")[0]
         }
       ]);

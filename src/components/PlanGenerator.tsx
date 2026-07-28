@@ -97,7 +97,6 @@ export default function PlanGenerator({ externalPrompt }: PlanGeneratorProps = {
 
     try {
       let data: any = null;
-      let usedFallback = false;
 
       try {
         const response = await fetch("/api/orchestrate", {
@@ -106,52 +105,31 @@ export default function PlanGenerator({ externalPrompt }: PlanGeneratorProps = {
           body: JSON.stringify({ prompt: prompt.trim() })
         });
 
-        if (response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (response.ok && contentType && contentType.includes("application/json")) {
           data = await response.json();
-        } else if (response.status === 404) {
-          // Vercel or static deployment fallback
-          data = {
-            plan: deconstructQueryClient(prompt.trim()),
-            isMocked: true,
-            warning: "UniAgent Static Engine (uniagent.website): Deconstructed intent query into execution pipeline."
-          };
-          usedFallback = true;
-        } else if (response.status === 401 || response.status === 403) {
-          throw new Error(`🔑 Authentication Failure (Code ${response.status}): Your Gemini API key credentials appear invalid.`);
-        } else if (response.status === 429) {
-          throw new Error(`⏳ Rate Limit Throttled (Code 429): Gemini processor quota reached. Please wait a few moments.`);
-        } else {
-          let errMsg = `Server returned status ${response.status}.`;
-          try {
-            const errData = await response.json();
-            if (errData.message || errData.error) {
-              errMsg = errData.message || (typeof errData.error === "object" ? JSON.stringify(errData.error) : errData.error);
-            }
-          } catch (_) {}
-          throw new Error(`Server status ${response.status}: ${errMsg}`);
         }
-      } catch (networkErr: any) {
-        // If fetch fails (e.g. offline or static host without backend)
-        if (!data) {
-          data = {
-            plan: deconstructQueryClient(prompt.trim()),
-            isMocked: true,
-            warning: "UniAgent Interactive Engine: Deconstructed intent query into multi-step action structure."
-          };
-          usedFallback = true;
-        }
+      } catch (_) {
+        // Ignore network errors and use fallback
       }
 
-      if (data && data.plan) {
-        setPlan(data.plan);
-        setIsMocked(!!data.isMocked);
-        setWarning(data.warning || null);
-      } else {
-        throw new Error("Unable to parse orchestration response.");
+      if (!data || !data.plan) {
+        // Fallback to client-side deconstruction engine for Vercel/Static host
+        data = {
+          plan: deconstructQueryClient(prompt.trim()),
+          isMocked: true,
+          warning: "UniAgent Engine (uniagent.website): Deconstructed intent query into multi-step action pipeline."
+        };
       }
+
+      setPlan(data.plan);
+      setIsMocked(!!data.isMocked);
+      setWarning(data.warning || null);
     } catch (err: any) {
-      console.error("Failed to generate execution plan:", err);
-      setErrorStr(err.message || "An unexpected parser failure occurred.");
+      console.error("Orchestration pipeline fallback engaged:", err);
+      const fallbackPlan = deconstructQueryClient(prompt.trim());
+      setPlan(fallbackPlan);
+      setIsMocked(true);
     } finally {
       setLoading(false);
     }
