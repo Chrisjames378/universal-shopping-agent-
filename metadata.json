@@ -1,6 +1,6 @@
 {
   "name": "Universal Agent Architect",
-  "description": "Interactive report, emulation suite, and AI brain platform for high-fidelity browser agent engineering.",
+  "description": "UniAgent Shopping Agent - Interactive emulation suite, live search, and AI brain platform hosted at uniagent.website.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
