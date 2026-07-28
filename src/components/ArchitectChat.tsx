@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MessageSquare, Send, X, Bot, ShieldAlert, Sparkles, AlertTriangle, CornerDownLeft } from "lucide-react";
 import { Message } from "../types";
+import { getArchitectReplyClient } from "../lib/clientFallback";
 
 export default function ArchitectChat() {
   const [chatOpen, setChatOpen] = useState<boolean>(false);
@@ -48,41 +49,35 @@ export default function ArchitectChat() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: textToSend.trim(),
-          history: newHistory.filter(h => h.id !== "init")
-        })
-      });
+      let replyText = "";
 
-      if (!response.ok) {
-        let errMsg = `Server returned status ${response.status}.`;
-        try {
-          const errData = await response.json();
-          if (errData.message || errData.error) {
-            errMsg = errData.message || (typeof errData.error === "object" ? JSON.stringify(errData.error) : errData.error);
-          }
-        } catch (_) {
-          // Use standard error info
-        }
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: textToSend.trim(),
+            history: newHistory.filter(h => h.id !== "init")
+          })
+        });
 
-        // Segment error modes cleanly based on HTTP codes
-        if (response.status === 401 || response.status === 403) {
-          throw new Error(`🔑 **Authentication Failure (Code ${response.status}):**\nYour Gemini API key credentials appear invalid or restricted. Please ensure a valid **GEMINI_API_KEY** is configured securely inside the **Secrets panel** of your Google AI Studio workspace.`);
-        } else if (response.status === 429) {
-          throw new Error(`⏳ **Resource Limits Reached (Code 429):**\nThe processor was throttled due to rapid requests. Please pause for 15-30 seconds to allow the resource quota to replenish successfully.`);
-        } else if (response.status >= 500) {
-          throw new Error(`⚙️ **Container Execution Fault (Code ${response.status}):**\nThe custom server runtime encountered a core compilation exception.\n\n*Diagnostics:* \`"${errMsg}"\`\n\nPlease check server logs for uncaught route handlers.`);
+        if (response.ok) {
+          const data = await response.json();
+          replyText = data.response || "No response received.";
+        } else if (response.status === 404) {
+          replyText = getArchitectReplyClient(textToSend.trim());
         } else {
-          throw new Error(`🛡️ **Request Mismatched (Code ${response.status}):**\nThe browser engine validation rejected this prompt structure.\n\n*Details:* \`"${errMsg}"\``);
+          let errMsg = `Server returned status ${response.status}.`;
+          try {
+            const errData = await response.json();
+            if (errData.message || errData.error) {
+              errMsg = errData.message || (typeof errData.error === "object" ? JSON.stringify(errData.error) : errData.error);
+            }
+          } catch (_) {}
+          throw new Error(errMsg);
         }
-      }
-
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.message || (typeof data.error === "object" ? JSON.stringify(data.error) : data.error));
+      } catch (networkErr: any) {
+        replyText = getArchitectReplyClient(textToSend.trim());
       }
 
       setMessages(prev => [
@@ -90,7 +85,7 @@ export default function ArchitectChat() {
         {
           id: "assistant-" + Date.now(),
           role: "assistant" as const,
-          text: data.response,
+          text: replyText,
           timestamp: new Date().toLocaleTimeString().split(" ")[0]
         }
       ]);

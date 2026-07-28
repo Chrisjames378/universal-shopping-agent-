@@ -6,6 +6,7 @@
 import React, { useState } from "react";
 import { Sparkles, FileJson, PlayCircle, Loader2, AlertCircle, ShieldAlert, Cpu, Award } from "lucide-react";
 import { ExecutionPlan } from "../types";
+import { deconstructQueryClient } from "../lib/clientFallback";
 
 const PRESETS = [
   "Find me a vegan gluten-free pizza under $25 near downtown and order it...",
@@ -95,54 +96,62 @@ export default function PlanGenerator({ externalPrompt }: PlanGeneratorProps = {
     setWarning(null);
 
     try {
-      const response = await fetch("/api/orchestrate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() })
-      });
+      let data: any = null;
+      let usedFallback = false;
 
-      if (!response.ok) {
-        let errMsg = `Server returned status ${response.status}.`;
-        try {
-          const errData = await response.json();
-          if (errData.message || errData.error) {
-            errMsg = errData.message || (typeof errData.error === "object" ? JSON.stringify(errData.error) : errData.error);
-          }
-        } catch (_) {
-          // Fallback to standard status
-        }
+      try {
+        const response = await fetch("/api/orchestrate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: prompt.trim() })
+        });
 
-        if (response.status === 401 || response.status === 403) {
-          throw new Error(`🔑 Authentication Failure (Code ${response.status}): Your Gemini API key credentials appear invalid. Please configure a valid GEMINI_API_KEY inside the Secrets panel of your workspace.`);
+        if (response.ok) {
+          data = await response.json();
+        } else if (response.status === 404) {
+          // Vercel or static deployment fallback
+          data = {
+            plan: deconstructQueryClient(prompt.trim()),
+            isMocked: true,
+            warning: "UniAgent Static Engine (uniagent.website): Deconstructed intent query into execution pipeline."
+          };
+          usedFallback = true;
+        } else if (response.status === 401 || response.status === 403) {
+          throw new Error(`🔑 Authentication Failure (Code ${response.status}): Your Gemini API key credentials appear invalid.`);
         } else if (response.status === 429) {
-          throw new Error(`⏳ Rate Limit Throttled (Code 429): Gemini processor quota reached. Please wait a few moments before retrying.`);
-        } else if (response.status >= 500) {
-          throw new Error(`⚙️ Server Fault (Code ${response.status}): The orchestration microservice threw an uncaught compilation error. Details: "${errMsg}"`);
+          throw new Error(`⏳ Rate Limit Throttled (Code 429): Gemini processor quota reached. Please wait a few moments.`);
         } else {
-          throw new Error(`🛡️ Request Validation Failed (Code ${response.status}): Details: "${errMsg}"`);
+          let errMsg = `Server returned status ${response.status}.`;
+          try {
+            const errData = await response.json();
+            if (errData.message || errData.error) {
+              errMsg = errData.message || (typeof errData.error === "object" ? JSON.stringify(errData.error) : errData.error);
+            }
+          } catch (_) {}
+          throw new Error(`Server status ${response.status}: ${errMsg}`);
+        }
+      } catch (networkErr: any) {
+        // If fetch fails (e.g. offline or static host without backend)
+        if (!data) {
+          data = {
+            plan: deconstructQueryClient(prompt.trim()),
+            isMocked: true,
+            warning: "UniAgent Interactive Engine: Deconstructed intent query into multi-step action structure."
+          };
+          usedFallback = true;
         }
       }
 
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.message || (typeof data.error === "object" ? JSON.stringify(data.error) : data.error));
-      }
-
-      setPlan(data.plan);
-      setIsMocked(!!data.isMocked);
-      if (data.warning) {
-        setWarning(data.warning);
+      if (data && data.plan) {
+        setPlan(data.plan);
+        setIsMocked(!!data.isMocked);
+        setWarning(data.warning || null);
       } else {
-        setWarning(null);
+        throw new Error("Unable to parse orchestration response.");
       }
     } catch (err: any) {
       console.error("Failed to generate execution plan:", err);
-      
-      let finalErrMsg = err.message || "An unexpected parser failure occurred.";
-      if (err instanceof TypeError && err.message?.toLowerCase().includes("fetch")) {
-        finalErrMsg = `🌐 Handshake Interrupted: Unable to connect to the backend microservice. Verify your internet connection and verify the server bounds.`;
-      }
-      setErrorStr(finalErrMsg);
+      setErrorStr(err.message || "An unexpected parser failure occurred.");
     } finally {
       setLoading(false);
     }

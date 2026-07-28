@@ -5,6 +5,7 @@
 
 import React, { useState } from "react";
 import { Megaphone, Search, TrendingUp, MessageSquare, Check, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { getGrokAnalysisClient } from "../lib/clientFallback";
 
 export default function GrokAdAdvisor() {
   const [adCopy, setAdCopy] = useState("Get the best deals on our new tech gear. Shop today.");
@@ -21,20 +22,30 @@ export default function GrokAdAdvisor() {
     setAnalysisResult(null);
 
     try {
-      const response = await fetch("/api/grok/analyze-ad", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ adCopy, targetAudience })
-      });
+      let resultData: any = null;
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to analyze ad copy");
+      try {
+        const response = await fetch("/api/grok/analyze-ad", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ adCopy, targetAudience })
+        });
+
+        if (response.ok) {
+          resultData = await response.json();
+        } else if (response.status === 404) {
+          resultData = getGrokAnalysisClient(adCopy, targetAudience);
+        } else {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || `Server status ${response.status}`);
+        }
+      } catch (networkErr: any) {
+        resultData = getGrokAnalysisClient(adCopy, targetAudience);
       }
 
-      setAnalysisResult(data);
+      setAnalysisResult(resultData);
     } catch (err: any) {
       setError(err.message);
     } finally {

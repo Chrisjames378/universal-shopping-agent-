@@ -23,6 +23,14 @@ import {
   Activity
 } from "lucide-react";
 import { UserAccount, PayPalSubscription, SubscriptionPlan, RenewalNotification } from "../types";
+import { 
+  getClientPaypalState, 
+  selectClientUser, 
+  createClientSubscription, 
+  approveClientSubscription, 
+  cancelClientSubscription, 
+  simulateClientRenewal 
+} from "../lib/clientFallback";
 
 // Helper to perform safe fetch and assert JSON response content type to handle transient server startup states
 async function safeJsonFetch(url: string, options?: RequestInit) {
@@ -67,7 +75,7 @@ export default function SubscriptionManager() {
   const [checkoutStep, setCheckoutStep] = useState<"auth" | "confirm" | "done">("auth");
   const [isSimulatingRenewal, setIsSimulatingRenewal] = useState<boolean>(false);
 
-  // Fetch the backend state
+  // Fetch state with client fallback for static hosts
   const fetchState = async () => {
     try {
       const data = await safeJsonFetch("/api/paypal/state");
@@ -77,24 +85,15 @@ export default function SubscriptionManager() {
       setSubscriptions(data.subscriptions || []);
       setNotifications(data.notifications || []);
       setError(null);
-    } catch (err: any) {
-      const isTransient = 
-        (err instanceof TypeError) ||
-        (err instanceof SyntaxError) ||
-        (err.name === "TypeError") ||
-        (err.message && (
-          err.message.includes("Failed to fetch") || 
-          err.message.includes("was not JSON") || 
-          err.message.includes("is not valid JSON") ||
-          err.message.includes("Unexpected token")
-        ));
-
-      if (isTransient) {
-        // Silently swallow transient fetch errors during server restart
-      } else {
-        console.error("Error fetching subscription state:", err);
-        setError(err.message || "Endpoint error - is your server container alive?");
-      }
+    } catch (_) {
+      // Static deployment or offline fallback
+      const fallbackData = getClientPaypalState();
+      setUsers(fallbackData.users);
+      if (!currentUserId) setCurrentUserId(fallbackData.currentUserId);
+      setPlans(fallbackData.plans);
+      setSubscriptions(fallbackData.subscriptions);
+      setNotifications(fallbackData.notifications);
+      setError(null);
     } finally {
       setLoading(false);
     }
@@ -102,12 +101,11 @@ export default function SubscriptionManager() {
 
   useEffect(() => {
     fetchState();
-    // Poll notifications/subscriptions every 4 seconds to catch background updates seamlessly
     const interval = setInterval(fetchState, 4000);
     return () => clearInterval(interval);
   }, []);
 
-  // Set the current emulated user session
+  // Set current emulated user session
   const handleUserSelect = async (userId: string) => {
     try {
       setLoading(true);
@@ -117,25 +115,33 @@ export default function SubscriptionManager() {
         body: JSON.stringify({ userId })
       });
       await fetchState();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (_) {
+      selectClientUser(userId);
+      setCurrentUserId(userId);
+      await fetchState();
     } finally {
       setLoading(false);
     }
   };
 
-  // Subscribe to a target plan
+  // Subscribe to target plan
   const handleSubscribeInitiate = async (planId: string) => {
     try {
       setLoading(true);
-      const result = await safeJsonFetch("/api/paypal/subscription/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, billingCycle: "monthly" })
-      });
-      
-      // Update local copy immediately and open the checkout dialog
-      setPendingSubscriptionId(result.subscription.id);
+      let subId = "";
+      try {
+        const result = await safeJsonFetch("/api/paypal/subscription/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planId, billingCycle: "monthly" })
+        });
+        subId = result.subscription.id;
+      } catch (_) {
+        const fallbackSub = createClientSubscription(planId, "monthly");
+        subId = fallbackSub.id;
+      }
+
+      setPendingSubscriptionId(subId);
       setIsCheckoutOpen(true);
       setCheckoutStep("auth");
       await fetchState();
@@ -146,25 +152,26 @@ export default function SubscriptionManager() {
     }
   };
 
-  // Approve the pending checkout inside the emulated secure popup frame
+  // Approve pending checkout
   const handleApproveCheckout = async () => {
     if (!pendingSubscriptionId) return;
     try {
       setCheckoutStep("confirm");
-      
-      // Emulate brief loading delay representing the secure banking verification tunnel handshake
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1200));
 
-      await safeJsonFetch("/api/paypal/subscription/approve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscriptionId: pendingSubscriptionId })
-      });
+      try {
+        await safeJsonFetch("/api/paypal/subscription/approve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subscriptionId: pendingSubscriptionId })
+        });
+      } catch (_) {
+        approveClientSubscription(pendingSubscriptionId);
+      }
       
       setCheckoutStep("done");
       await fetchState();
       
-      // Auto-close success modal after brief delay
       setTimeout(() => {
         setIsCheckoutOpen(false);
         setPendingSubscriptionId(null);
@@ -175,18 +182,22 @@ export default function SubscriptionManager() {
     }
   };
 
-  // Cancel the active subscription
+  // Cancel active subscription
   const handleCancelSubscription = async (subId: string) => {
     if (!window.confirm("Are you sure you want to stop this PayPal automated recurring billing cycle? Your premium access will terminate.")) {
       return;
     }
     try {
       setLoading(true);
-      await safeJsonFetch("/api/paypal/subscription/cancel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscriptionId: subId })
-      });
+      try {
+        await safeJsonFetch("/api/paypal/subscription/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subscriptionId: subId })
+        });
+      } catch (_) {
+        cancelClientSubscription(subId);
+      }
       await fetchState();
     } catch (err: any) {
       setError(err.message);
@@ -195,15 +206,19 @@ export default function SubscriptionManager() {
     }
   };
 
-  // Simulate automated renewal event or payment failure (Webhook injection)
+  // Simulate automated renewal event or payment failure
   const handleSimulateRenewal = async (subId: string, simulateFailure: boolean) => {
     try {
       setIsSimulatingRenewal(true);
-      await safeJsonFetch("/api/paypal/subscription/simulate-renewal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscriptionId: subId, simulateFailure })
-      });
+      try {
+        await safeJsonFetch("/api/paypal/subscription/simulate-renewal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subscriptionId: subId, simulateFailure })
+        });
+      } catch (_) {
+        simulateClientRenewal(subId, simulateFailure);
+      }
       await fetchState();
     } catch (err: any) {
       setError(err.message);
