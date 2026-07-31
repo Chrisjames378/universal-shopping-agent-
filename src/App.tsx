@@ -28,6 +28,7 @@ import ReliabilityAnalysis from "./components/ReliabilityAnalysis";
 import ArchitectChat from "./components/ArchitectChat";
 import SubscriptionManager from "./components/SubscriptionManager";
 import ShoppingDirectory from "./components/ShoppingDirectory";
+import ApiStatusIndicator from "./components/ApiStatusIndicator";
 
 export default function App() {
   const [activeBarrier, setActiveBarrier] = useState<"dom" | "bot" | "trust" | null>("dom");
@@ -97,10 +98,7 @@ export default function App() {
               // Audit
             </a>
             <span className="text-slate-600 shrink-0">|</span>
-            <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider text-[10px]">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              CDP Agent Node Online
-            </div>
+            <ApiStatusIndicator />
           </div>
         </div>
       </header>

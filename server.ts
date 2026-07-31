@@ -39,6 +39,22 @@ function getGeminiClient(): GoogleGenAI {
 }
 
 // -------------------------------------------------------------
+// 0. API Endpoint: System Health Check
+// -------------------------------------------------------------
+app.get("/api/health", (req, res) => {
+  const hasApiKey = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY";
+  res.json({
+    status: "ok",
+    service: "UniAgent Orchestration Microservice",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || "development",
+    hasApiKey,
+    mode: hasApiKey ? "live_gemini" : "fallback_simulation"
+  });
+});
+
+// -------------------------------------------------------------
 // 1. API Endpoint: Orchestrate Action Request
 // -------------------------------------------------------------
 app.post("/api/orchestrate", async (req, res) => {
@@ -65,7 +81,7 @@ app.post("/api/orchestrate", async (req, res) => {
     const client = getGeminiClient();
 
     const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: `Translate the following shopping or browser command into a highly detailed and advanced agent execution plan. Make the steps technical and realistic, describing automated interactions with dynamic DOM nodes, proxy settings, or custom heuristics: "${prompt}"`,
       config: {
         systemInstruction: `You are the elite orchestration brain of an advanced Autonomous Web Action Agent.
@@ -137,10 +153,12 @@ You must always output a JSON schema match. Ensure elements are highly technical
     const planData = JSON.parse(responseText.trim());
     res.json({ plan: planData, isMocked: false });
   } catch (err: any) {
-    console.error("Orchestrate error:", err);
-    res.status(500).json({
-      error: "Failed to generate orchestration plan due to internal processor error.",
-      message: err.message || String(err)
+    console.error("Orchestrate error, returning fallback plan:", err);
+    const mockPlan = mockDeconstructQuery(req.body?.prompt || "");
+    res.json({
+      plan: mockPlan,
+      isMocked: true,
+      warning: `UniAgent Fallback Engine Activated (${err.message || "Model Query Error"}). Displaying synthesized execution plan.`
     });
   }
 });
@@ -176,7 +194,7 @@ app.post("/api/chat", async (req, res) => {
     }));
 
     const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: [
         ...formattedHistory,
         { role: "user", parts: [{ text: message }] }
@@ -197,10 +215,12 @@ Answer questions concisely, professionally, and with depth. Use markdown for lis
     const reply = response.text || "I was unable to formulate a response.";
     res.json({ response: reply.trim(), isMocked: false });
   } catch (err: any) {
-    console.error("Chat error:", err);
-    res.status(500).json({
-      error: "Internal server error occurred when querying the Architect model.",
-      message: err.message || String(err)
+    console.error("Chat error, returning fallback response:", err);
+    const mockResponse = getMockArchitectReply(req.body?.message || "");
+    res.json({
+      response: mockResponse,
+      isMocked: true,
+      warning: `Fallback mode active (${err.message || "Model Query Exception"})`
     });
   }
 });
