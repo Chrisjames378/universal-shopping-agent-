@@ -17,7 +17,8 @@ import {
   Fingerprint,
   FileCode,
   AlertOctagon,
-  Lightbulb
+  Lightbulb,
+  Megaphone
 } from "lucide-react";
 
 import MetricCard from "./components/MetricCard";
@@ -29,6 +30,7 @@ import ArchitectChat from "./components/ArchitectChat";
 import SubscriptionManager from "./components/SubscriptionManager";
 import ShoppingDirectory from "./components/ShoppingDirectory";
 import ApiStatusIndicator from "./components/ApiStatusIndicator";
+import GrokAdAdvisor from "./components/GrokAdAdvisor";
 
 export default function App() {
   const [activeBarrier, setActiveBarrier] = useState<"dom" | "bot" | "trust" | null>("dom");
@@ -84,6 +86,9 @@ export default function App() {
             </a>
             <a href="#directory" className="text-slate-400 hover:text-white transition-colors">
               // Shops
+            </a>
+            <a href="#ads" className="text-indigo-400 hover:text-white transition-colors font-bold flex items-center gap-1">
+              // Grok Ads
             </a>
             <a href="#sandbox" className="text-slate-400 hover:text-white transition-colors">
               // Brain
@@ -276,6 +281,19 @@ export default function App() {
           </div>
 
           <ShoppingDirectory onSelectPrompt={setSharedPrompt} />
+        </section>
+
+        {/* 5.8. Section 4: Grok AI & X-Ads Strategy Advisor */}
+        <section id="ads" className="scroll-mt-20">
+          <div className="border-l-2 border-indigo-500 pl-3 mb-6">
+            <h2 className="text-lg font-bold text-white uppercase tracking-wider font-display flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-indigo-400" />
+              4. Grok AI & X-Ads Strategy Advisor
+            </h2>
+            <p className="text-xs text-slate-400 font-mono">Leverage real-time marketing analytics, X (Twitter) ad optimization, and ROAS heuristics</p>
+          </div>
+
+          <GrokAdAdvisor />
         </section>
 
         {/* 6. Section 4: The Brain Plan Generator */}
