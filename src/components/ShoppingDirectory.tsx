@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { 
   Search, 
   Globe, 
@@ -26,11 +26,16 @@ import {
   ShieldCheck,
   Megaphone,
   TrendingUp,
-  MessageSquare
+  MessageSquare,
+  Database,
+  Plus,
+  Store
 } from "lucide-react";
 import { SHOPPING_SITES, ShoppingSite } from "../data/shoppingSites";
 
 import GrokAdAdvisor from "./GrokAdAdvisor";
+import CustomSiteManager, { getStoredCustomSites } from "./CustomSiteManager";
+import PublicEcomApis from "./PublicEcomApis";
 
 interface ShoppingDirectoryProps {
   onSelectPrompt: (prompt: string) => void;
@@ -40,15 +45,25 @@ export default function ShoppingDirectory({ onSelectPrompt }: ShoppingDirectoryP
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedRegion, setSelectedRegion] = useState<string>("All");
+  const [customSites, setCustomSites] = useState<ShoppingSite[]>(getStoredCustomSites());
   const [selectedSite, setSelectedSite] = useState<ShoppingSite | null>(SHOPPING_SITES[0]);
-  const [activeTab, setActiveTab] = useState<"directory" | "paypal-advisor" | "grok-x-ads-advisor">("directory");
+  const [activeTab, setActiveTab] = useState<"directory" | "public-apis" | "custom-manager" | "paypal-advisor" | "grok-x-ads-advisor">("directory");
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
+
+  // Combine standard and custom sites
+  const allSites = useMemo(() => {
+    return [...customSites, ...SHOPPING_SITES];
+  }, [customSites]);
+
+  const refreshCustomSites = () => {
+    setCustomSites(getStoredCustomSites());
+  };
 
   // Filter lists
   const categories = ["All", "Department", "Tech & Electronics", "Fashion & Apparel", "Beauty & Health", "Home & Living", "Sports & Outdoors", "Marketplaces & Direct"];
   const regions = ["All", "Oceania", "North America", "UK & Europe", "Global", "Asia"];
 
-  const filteredSites = SHOPPING_SITES.filter(site => {
+  const filteredSites = allSites.filter(site => {
     const matchesSearch = site.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           site.domain.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "All" || site.category === selectedCategory;
@@ -82,14 +97,14 @@ export default function ShoppingDirectory({ onSelectPrompt }: ShoppingDirectoryP
           </span>
           <h3 className="text-xl font-bold font-display text-white tracking-tight flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-indigo-400" />
-            Active Shopping Storefront Directories ({SHOPPING_SITES.length} Sites)
+            Active Shopping Storefront Directories ({allSites.length} Sites)
           </h3>
           <p className="text-xs text-slate-400">
-            Select from major global merchants to inject target schemas and test checkout paths inside the simulation enclaves.
+            Select from major global merchants, live public APIs, or custom stores to inject target schemas and test checkout paths inside the simulation enclaves.
           </p>
         </div>
 
-        <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 shrink-0 self-start sm:self-center">
+        <div className="flex flex-wrap bg-slate-950 p-1 rounded-lg border border-slate-800 shrink-0 self-start sm:self-center gap-1">
           <button
             onClick={() => setActiveTab("directory")}
             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-2 ${
@@ -100,6 +115,28 @@ export default function ShoppingDirectory({ onSelectPrompt }: ShoppingDirectoryP
           >
             <Compass className="h-3.5 w-3.5" />
             Storefront Selector
+          </button>
+          <button
+            onClick={() => setActiveTab("public-apis")}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-2 ${
+              activeTab === "public-apis"
+                ? "bg-sky-600/20 text-sky-300 border border-sky-500/30 font-bold"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Database className="h-3.5 w-3.5 text-sky-400" />
+            Free Public APIs
+          </button>
+          <button
+            onClick={() => setActiveTab("custom-manager")}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-2 ${
+              activeTab === "custom-manager"
+                ? "bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 font-bold"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Plus className="h-3.5 w-3.5 text-emerald-400" />
+            Custom Store Manager
           </button>
           <button
             onClick={() => setActiveTab("paypal-advisor")}
@@ -427,6 +464,10 @@ export default function ShoppingDirectory({ onSelectPrompt }: ShoppingDirectoryP
 
           </div>
         </div>
+      ) : activeTab === "public-apis" ? (
+        <PublicEcomApis onSelectPrompt={handleLaunchPrompt} />
+      ) : activeTab === "custom-manager" ? (
+        <CustomSiteManager onSelectPrompt={handleLaunchPrompt} onSiteAdded={refreshCustomSites} />
       ) : activeTab === "grok-x-ads-advisor" ? (
         <GrokAdAdvisor />
       ) : null}

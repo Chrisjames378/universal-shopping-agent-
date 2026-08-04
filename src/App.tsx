@@ -18,7 +18,9 @@ import {
   FileCode,
   AlertOctagon,
   Lightbulb,
-  Megaphone
+  Megaphone,
+  UserPlus,
+  Globe
 } from "lucide-react";
 
 import MetricCard from "./components/MetricCard";
@@ -31,10 +33,12 @@ import SubscriptionManager from "./components/SubscriptionManager";
 import ShoppingDirectory from "./components/ShoppingDirectory";
 import ApiStatusIndicator from "./components/ApiStatusIndicator";
 import GrokAdAdvisor from "./components/GrokAdAdvisor";
+import SignUpModal from "./components/SignUpModal";
 
 export default function App() {
   const [activeBarrier, setActiveBarrier] = useState<"dom" | "bot" | "trust" | null>("dom");
   const [sharedPrompt, setSharedPrompt] = useState<string>("");
+  const [isSignUpOpen, setIsSignUpOpen] = useState<boolean>(false);
 
   // Dynamic feedback descriptors for barriers
   const barrierDetails = {
@@ -80,7 +84,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-6 font-mono text-xs">
+          <div className="hidden md:flex items-center gap-4 font-mono text-xs">
             <a href="#orchestration" className="text-slate-400 hover:text-white transition-colors">
               // Loop
             </a>
@@ -96,13 +100,13 @@ export default function App() {
             <a href="#vault" className="text-slate-400 hover:text-white transition-colors">
               // Vault
             </a>
-            <a href="#subscriptions" className="text-slate-400 hover:text-white transition-colors">
-              // Billing
-            </a>
-            <a href="#chart" className="text-slate-400 hover:text-white transition-colors">
-              // Audit
-            </a>
-            <span className="text-slate-600 shrink-0">|</span>
+            <span className="text-slate-700 shrink-0">|</span>
+            <button
+              onClick={() => setIsSignUpOpen(true)}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition-all hover:scale-105"
+            >
+              <UserPlus className="h-3.5 w-3.5 text-indigo-200" /> Sign Up
+            </button>
             <ApiStatusIndicator />
           </div>
         </div>
@@ -113,8 +117,9 @@ export default function App() {
         
         {/* Top Hero Pitch */}
         <section className="text-center max-w-4xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/5 text-indigo-300 text-xs font-semibold uppercase tracking-widest border border-indigo-500/10 font-mono">
-            System Design Specification
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-950/60 text-indigo-300 text-xs font-semibold uppercase tracking-widest border border-indigo-500/30 font-mono shadow-md">
+            <Globe className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Official Domain: www.uniagent.website</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-none font-display">
             Buying things on the internet is <span className="text-indigo-400 relative">harder than it looks.</span>
@@ -122,6 +127,21 @@ export default function App() {
           <p className="text-sm sm:text-base text-slate-450 leading-relaxed max-w-2xl mx-auto">
             Building a true "Universal Browser Action Agent" isn't merely about writing better prompts. It requires an orchestrator capable of multimodal perception, stealth TLS tunneling, and secure payment isolate enclaves.
           </p>
+
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={() => setIsSignUpOpen(true)}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider font-mono flex items-center gap-2 shadow-xl shadow-indigo-600/30 transition-all hover:scale-105"
+            >
+              <UserPlus className="h-4 w-4 text-indigo-200" /> Sign Up to www.uniagent.website
+            </button>
+            <a
+              href="#ads"
+              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl text-xs font-bold font-mono transition-colors"
+            >
+              🎯 Build Ad Campaigns
+            </a>
+          </div>
         </section>
 
         {/* 3. Top Metrics Section */}
@@ -283,14 +303,14 @@ export default function App() {
           <ShoppingDirectory onSelectPrompt={setSharedPrompt} />
         </section>
 
-        {/* 5.8. Section 4: Grok AI & X-Ads Strategy Advisor */}
+        {/* 5.8. Section 4: Multi-Platform Ad Strategy Advisor */}
         <section id="ads" className="scroll-mt-20">
           <div className="border-l-2 border-indigo-500 pl-3 mb-6">
             <h2 className="text-lg font-bold text-white uppercase tracking-wider font-display flex items-center gap-2">
               <Megaphone className="w-5 h-5 text-indigo-400" />
-              4. Grok AI & X-Ads Strategy Advisor
+              4. Multi-Platform Ad Strategy Advisor (X, Meta, TikTok, Amazon, eBay)
             </h2>
-            <p className="text-xs text-slate-400 font-mono">Leverage real-time marketing analytics, X (Twitter) ad optimization, and ROAS heuristics</p>
+            <p className="text-xs text-slate-400 font-mono">Optimize campaigns, ad copy, and search titles for X (Twitter), Facebook/Meta, TikTok, Amazon, and eBay</p>
           </div>
 
           <GrokAdAdvisor />
@@ -358,6 +378,13 @@ export default function App() {
 
       {/* Floating Chief Architect Chat widget */}
       <ArchitectChat />
+
+      {/* Member Sign Up Modal for www.uniagent.website */}
+      <SignUpModal
+        isOpen={isSignUpOpen}
+        onClose={() => setIsSignUpOpen(false)}
+        defaultDomain="www.uniagent.website"
+      />
 
     </div>
   );
