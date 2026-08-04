@@ -51,6 +51,27 @@ npm run dev
 
 The application will be accessible at `http://localhost:3000`.
 
+### Vercel Custom Domain DNS Setup (`uniagent.website`)
+
+If you are connecting **`uniagent.website`** on Vercel and see an **"Invalid Configuration"** error:
+
+1. **Log in to your Domain Registrar** (e.g., GoDaddy, Namecheap, Cloudflare, Google Domains, Porkbun).
+2. **Navigate to DNS Management / DNS Records**.
+3. **Delete/Remove Old A Records**:
+   - ❌ Remove `A` record pointing to `15.197.225.128`
+   - ❌ Remove `A` record pointing to `3.33.251.168`
+4. **Add New Vercel DNS Records**:
+   - ✅ **A Record (Root Domain `@`)**:
+     - **Type**: `A`
+     - **Name / Host**: `@` (or `uniagent.website`)
+     - **Value / Points To**: `216.198.79.1`
+     - **TTL**: `Auto` or `3600`
+   - ✅ **CNAME Record (`www` Subdomain)**:
+     - **Type**: `CNAME`
+     - **Name / Host**: `www`
+     - **Value / Points To**: `cname.vercel-dns.com`
+5. **Verify on Vercel**: Return to your Vercel Project Settings -> **Domains** and click **Refresh** / **Verify**. (DNS propagation usually takes 1 to 5 minutes).
+
 ---
 
 ## 🛠️ Tech Stack

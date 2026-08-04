@@ -233,14 +233,25 @@ export default function ApiStatusIndicator() {
           </div>
 
           {/* Footer note */}
-          <div className="pt-2 border-t border-slate-900 flex items-center justify-between text-[10px] font-mono text-slate-500">
-            <span>Background Heartbeat: 10s</span>
-            <button
-              onClick={() => pingNow()}
-              className="text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
-            >
-              Force Ping
-            </button>
+          <div className="pt-2 border-t border-slate-900 space-y-2">
+            <div className="p-2 bg-indigo-950/40 border border-indigo-500/20 rounded text-[10px] space-y-1 font-mono">
+              <div className="flex items-center justify-between text-indigo-300 font-bold">
+                <span>🌐 Vercel Custom Domain DNS (uniagent.website)</span>
+              </div>
+              <p className="text-slate-400 leading-tight font-sans text-[10px]">
+                Remove old A records (<code className="text-red-400">15.197.225.128</code>, <code className="text-red-400">3.33.251.168</code>) & point <code className="text-emerald-400">@</code> to <code className="text-emerald-300 font-bold">216.198.79.1</code> on your domain registrar.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] font-mono text-slate-500">
+              <span>Background Heartbeat: 10s</span>
+              <button
+                onClick={() => pingNow()}
+                className="text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+              >
+                Force Ping
+              </button>
+            </div>
           </div>
 
         </div>

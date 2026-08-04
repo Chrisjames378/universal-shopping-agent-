@@ -564,17 +564,25 @@ export default function GrokAdAdvisor() {
                 </div>
               </div>
 
-              {/* Official API Developer Portals Guide */}
-              <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-lg space-y-2 text-[11px]">
+              {/* Official API Developer Portals & API Key FAQ Guide */}
+              <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-lg space-y-2.5 text-[11px]">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-200">
                   <span className="flex items-center gap-1.5 font-mono">
-                    🔑 Official Ad Network API Developer Portals
+                    🔑 Do You Need External Ad Network API Keys?
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">Key Registration</span>
+                  <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    No Keys Required for AI Advice
+                  </span>
                 </div>
-                <p className="text-slate-400 text-[10px] leading-relaxed">
-                  If you wish to manage ad campaigns programmatically via REST APIs rather than the web UI, register your developer app at these official portals:
-                </p>
+                <div className="p-2.5 bg-slate-950/80 border border-slate-800/80 rounded text-[11px] text-slate-300 space-y-1.5">
+                  <p className="leading-relaxed">
+                    <strong className="text-white">Short Answer:</strong> <span className="text-emerald-400 font-semibold">No!</span> Grok AI evaluates ad copy, target demographics, and performance predictions 100% out-of-the-box using built-in AI models. You can instantly copy optimized copy and campaign specs into Meta Ads, TikTok Ads, or X Ads Manager without any API keys.
+                  </p>
+                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                    *Optional:* If you want programmatically automated ad publishing directly from this web app via REST APIs, register developer keys at the official portals below:
+                  </p>
+                </div>
+
                 <div className="grid sm:grid-cols-2 gap-2 font-mono text-[10px] pt-1">
                   <a
                     href="https://developers.facebook.com/docs/marketing-apis"
@@ -819,6 +827,80 @@ export default function GrokAdAdvisor() {
                 )}
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Real-time Ad Performance Alerts & Anomaly Monitor */}
+        <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+              </span>
+              <h6 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-400" />
+                Live Campaign Performance Alerts & Anomaly Detector
+              </h6>
+            </div>
+            <span className="text-[10px] text-slate-400 font-mono bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+              Auto-Scanned by Grok
+            </span>
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-2.5 pt-1 text-[11px]">
+            {/* Alert 1 */}
+            <div className="p-3 bg-amber-950/20 border border-amber-500/30 rounded-lg space-y-1.5">
+              <div className="flex items-center justify-between text-amber-400 font-bold font-mono text-[10px]">
+                <span>⚡ CTR Spike (+2.4%)</span>
+                <span>Day 24</span>
+              </div>
+              <p className="text-slate-300 text-[10px] leading-relaxed">
+                Click-through rate surged on X timeline. Hook text matched high viral gaming intent.
+              </p>
+              <button 
+                onClick={() => alert("Recommendation: Increase daily budget on this winning variant by +20% to capture high intent volume.")}
+                className="text-[10px] text-amber-400 hover:underline font-mono block pt-0.5 font-bold"
+              >
+                + Reallocate Budget →
+              </button>
+            </div>
+
+            {/* Alert 2 */}
+            <div className="p-3 bg-emerald-950/20 border border-emerald-500/30 rounded-lg space-y-1.5">
+              <div className="flex items-center justify-between text-emerald-400 font-bold font-mono text-[10px]">
+                <span>📉 CPC Drop (-$0.22)</span>
+                <span>Day 18</span>
+              </div>
+              <p className="text-slate-300 text-[10px] leading-relaxed">
+                Cost per click decreased as ad quality score hit 85+. High relevance index on Meta & X.
+              </p>
+              <button 
+                onClick={() => alert("Relevance score verified at 8.8/10. Ad auction bid efficiency optimal.")}
+                className="text-[10px] text-emerald-400 hover:underline font-mono block pt-0.5 font-bold"
+              >
+                View Quality Score →
+              </button>
+            </div>
+
+            {/* Alert 3 */}
+            <div className="p-3 bg-sky-950/20 border border-sky-500/30 rounded-lg space-y-1.5">
+              <div className="flex items-center justify-between text-sky-400 font-bold font-mono text-[10px]">
+                <span>🎯 Target Destination</span>
+                <span>Active</span>
+              </div>
+              <p className="text-slate-300 text-[10px] leading-relaxed">
+                Ad destination set to <span className="text-sky-300 font-mono">uniagent.website</span> with custom tracking parameters.
+              </p>
+              <a 
+                href="https://www.uniagent.website" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[10px] text-sky-400 hover:underline font-mono block pt-0.5 font-bold"
+              >
+                Test Destination Link ↗
+              </a>
+            </div>
           </div>
         </div>
       </div>

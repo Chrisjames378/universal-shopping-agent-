@@ -83,14 +83,14 @@ export function useApiHeartbeat(intervalMs: number = 12000): ApiHeartbeatState {
         apiKeyDetected = !!body.hasApiKey;
 
         currentEndpoints.push({
-          endpoint: "/api/health",
+          endpoint: "/api/health (Gemini AI)",
           ok: true,
           status: res.status,
           latencyMs: healthLatency
         });
       } else {
         currentEndpoints.push({
-          endpoint: "/api/health",
+          endpoint: "/api/health (Gemini AI)",
           ok: false,
           status: res.status,
           latencyMs: healthLatency,
@@ -100,11 +100,47 @@ export function useApiHeartbeat(intervalMs: number = 12000): ApiHeartbeatState {
     } catch (err: any) {
       const errLatency = Math.round(performance.now() - startTime);
       currentEndpoints.push({
-        endpoint: "/api/health",
+        endpoint: "/api/health (Gemini AI)",
         ok: false,
         status: 0,
         latencyMs: errLatency,
         error: err.name === "AbortError" ? "Connection Timed Out (6s)" : (err.message || "Network Unreachable")
+      });
+    }
+
+    // 2. Check /api/paypal/state
+    try {
+      const ppStart = performance.now();
+      const ppRes = await fetch("/api/paypal/state", {
+        method: "GET",
+        headers: { "Cache-Control": "no-cache" }
+      });
+      const ppLatency = Math.round(performance.now() - ppStart);
+      const isPpJson = ppRes.headers.get("content-type")?.includes("application/json");
+
+      if (ppRes.ok && isPpJson) {
+        currentEndpoints.push({
+          endpoint: "/api/paypal/state (PayPal Gateway)",
+          ok: true,
+          status: ppRes.status,
+          latencyMs: ppLatency
+        });
+      } else {
+        currentEndpoints.push({
+          endpoint: "/api/paypal/state (PayPal Gateway)",
+          ok: false,
+          status: ppRes.status,
+          latencyMs: ppLatency,
+          error: `HTTP ${ppRes.status}`
+        });
+      }
+    } catch (ppErr: any) {
+      currentEndpoints.push({
+        endpoint: "/api/paypal/state (PayPal Gateway)",
+        ok: false,
+        status: 0,
+        latencyMs: 0,
+        error: ppErr.message || "Offline Fallback"
       });
     }
 

@@ -7,12 +7,25 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
-import { createServer as createViteServer } from "vite";
+import type { UserAccount, PayPalSubscription, SubscriptionPlan, RenewalNotification } from "./src/types";
 
 // Load local environment variables if available
 dotenv.config();
 
 const app = express();
+
+// CORS Middleware for Vercel custom domains and cross-origin requests
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
+
 app.use(express.json());
 
 const PORT = Number(process.env.PORT) || 3000; // Build trigger for Cloud Build
@@ -403,9 +416,6 @@ let mockNotifications: RenewalNotification[] = [
   { id: "notif_init2", subscriptionId: "sub_paypal_initial123", timestamp: "2026-05-01T09:10:00Z", type: "BILLING_SUCCESS", amount: 99.00, message: "Authorized billing receipt charge for period May 1 to Jun 1." }
 ];
 
-// Import state definitions
-import { UserAccount, PayPalSubscription, SubscriptionPlan, RenewalNotification } from "./src/types";
-
 // Get collective emulated subscription server state
 app.get("/api/paypal/state", (req, res) => {
   res.json({
@@ -653,6 +663,7 @@ app.post("/api/paypal/webhook", (req, res) => {
 // -------------------------------------------------------------
 async function bootstrap() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

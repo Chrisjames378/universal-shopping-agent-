@@ -240,10 +240,18 @@ export default function SubscriptionManager() {
       {/* Title Header */}
       <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-5">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full border border-blue-500/25 uppercase font-bold tracking-wider">
               Live PayPal SDK Integration
             </span>
+            <a 
+              href="https://developer.paypal.com/dashboard/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[10px] font-mono text-blue-400 hover:text-blue-300 bg-slate-950 px-2.5 py-1 rounded-full border border-slate-800 flex items-center gap-1 transition-colors"
+            >
+              Get PayPal Developer API Keys <ExternalLink className="h-3 w-3" />
+            </a>
           </div>
           <h3 className="text-xl font-bold font-display text-white tracking-tight flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-blue-400" />
