@@ -85,28 +85,12 @@ export default function App() {
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-5 font-sans text-xs font-semibold">
-            <a href="#orchestration" className="text-slate-300 hover:text-white transition-colors">
-              Features
-            </a>
-            <a href="#directory" className="text-slate-300 hover:text-white transition-colors">
-              Directory
-            </a>
-            <a href="#ads" className="text-indigo-400 hover:text-white transition-colors font-bold flex items-center gap-1">
-              Grok Ads
-            </a>
-            <a href="#vault" className="text-slate-300 hover:text-white transition-colors">
-              Security & Vault
-            </a>
-            <a href="#pricing" className="text-slate-300 hover:text-white transition-colors">
-              Plans
-            </a>
-            <span className="text-slate-700 shrink-0">|</span>
+          <div className="hidden md:flex items-center gap-4 font-sans text-xs font-semibold">
             <button
               onClick={() => setIsSignUpOpen(true)}
-              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition-all hover:scale-105 cursor-pointer font-mono text-xs"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/25 transition-all hover:scale-105 cursor-pointer font-mono text-xs"
             >
-              <UserPlus className="h-3.5 w-3.5 text-indigo-200" /> Sign Up
+              <UserPlus className="h-4 w-4 text-indigo-200" /> Sign Up
             </button>
             <ApiStatusIndicator />
           </div>

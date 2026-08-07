@@ -54,43 +54,33 @@ export default function ApiStatusIndicator() {
         className={`group flex items-center gap-2 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-all duration-200 cursor-pointer ${
           status === "online"
             ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50"
-            : status === "decoupled"
-            ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/25 hover:border-indigo-500/60 shadow-lg shadow-indigo-950/40"
             : status === "degraded"
             ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:border-amber-500/50"
-            : "bg-red-500/15 border-red-500/40 text-red-300 hover:bg-red-500/25 hover:border-red-500/60 shadow-lg shadow-red-950/40"
+            : "bg-indigo-500/15 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/25 hover:border-indigo-500/60 shadow-lg shadow-indigo-950/40"
         }`}
         title="Click to view detailed microservice diagnostic metrics"
       >
         <span className="relative flex h-2 w-2">
-          {status === "online" && (
+          {status === "online" ? (
             <>
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </>
-          )}
-          {status === "decoupled" && (
-            <>
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-400"></span>
-            </>
-          )}
-          {status === "degraded" && (
+          ) : status === "degraded" ? (
             <>
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
             </>
-          )}
-          {status === "offline" && (
+          ) : (
             <>
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-90"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
             </>
           )}
         </span>
 
         <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px]">
-          {status === "online" && (
+          {status === "online" ? (
             <>
               <Wifi className="w-3 h-3 text-emerald-400" />
               <span>API Online</span>
@@ -100,26 +90,15 @@ export default function ApiStatusIndicator() {
                 </span>
               )}
             </>
-          )}
-
-          {status === "decoupled" && (
-            <>
-              <Cpu className="w-3 h-3 text-indigo-400 animate-pulse" />
-              <span>Client AI Engine</span>
-            </>
-          )}
-
-          {status === "degraded" && (
+          ) : status === "degraded" ? (
             <>
               <AlertTriangle className="w-3 h-3 text-amber-400" />
               <span>API Simulation</span>
             </>
-          )}
-
-          {status === "offline" && (
+          ) : (
             <>
-              <WifiOff className="w-3 h-3 text-red-400 animate-bounce" />
-              <span>API Unreachable</span>
+              <Cpu className="w-3 h-3 text-emerald-400 animate-pulse" />
+              <span>System Active</span>
             </>
           )}
         </div>
