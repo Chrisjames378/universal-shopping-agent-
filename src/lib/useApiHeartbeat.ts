@@ -57,23 +57,42 @@ export function useApiHeartbeat(intervalMs: number = 12000): ApiHeartbeatState {
     let apiKeyDetected = false;
     const currentEndpoints: EndpointHealth[] = [];
 
-    // 1. Check /api/health
+    // 1. Check /api/health (or fallback /health)
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 6000);
 
       const healthStart = performance.now();
-      const res = await fetch("/api/health", {
+      let res = await fetch("/api/health", {
         method: "GET",
-        headers: { "Cache-Control": "no-cache" },
+        headers: { "Cache-Control": "no-cache", "Accept": "application/json" },
         signal: controller.signal
       });
+
+      let contentType = res.headers.get("content-type");
+      let isJson = contentType && contentType.includes("application/json");
+
+      // Attempt fallback if /api/health returned non-JSON / 404
+      if ((!res.ok || !isJson) && !controller.signal.aborted) {
+        try {
+          const altRes = await fetch("/health", {
+            method: "GET",
+            headers: { "Cache-Control": "no-cache", "Accept": "application/json" },
+            signal: controller.signal
+          });
+          const altType = altRes.headers.get("content-type");
+          if (altRes.ok && altType && altType.includes("application/json")) {
+            res = altRes;
+            isJson = true;
+          }
+        } catch (_) {
+          // Keep primary res response
+        }
+      }
+
       clearTimeout(timeoutId);
 
       const healthLatency = Math.round(performance.now() - healthStart);
-
-      const contentType = res.headers.get("content-type");
-      const isJson = contentType && contentType.includes("application/json");
 
       if (res.ok && isJson) {
         const body = await res.json();
@@ -83,24 +102,24 @@ export function useApiHeartbeat(intervalMs: number = 12000): ApiHeartbeatState {
         apiKeyDetected = !!body.hasApiKey;
 
         currentEndpoints.push({
-          endpoint: "/api/health (Gemini AI)",
+          endpoint: "/api/health (Gemini AI Brain)",
           ok: true,
           status: res.status,
           latencyMs: healthLatency
         });
       } else {
         currentEndpoints.push({
-          endpoint: "/api/health (Gemini AI)",
+          endpoint: "/api/health (Gemini AI Brain)",
           ok: false,
           status: res.status,
           latencyMs: healthLatency,
-          error: `HTTP ${res.status} ${res.statusText || "Non-JSON response"}`
+          error: `HTTP ${res.status} (${isJson ? "JSON Error" : "Returned non-JSON HTML/404 Page"})`
         });
       }
     } catch (err: any) {
       const errLatency = Math.round(performance.now() - startTime);
       currentEndpoints.push({
-        endpoint: "/api/health (Gemini AI)",
+        endpoint: "/api/health (Gemini AI Brain)",
         ok: false,
         status: 0,
         latencyMs: errLatency,

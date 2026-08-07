@@ -54,8 +54,9 @@ function getGeminiClient(): GoogleGenAI {
 // -------------------------------------------------------------
 // 0. API Endpoint: System Health Check
 // -------------------------------------------------------------
-app.get("/api/health", (req, res) => {
+app.get(["/api/health", "/health"], (req, res) => {
   const hasApiKey = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY";
+  res.setHeader("Content-Type", "application/json");
   res.json({
     status: "ok",
     service: "UniAgent Orchestration Microservice",
@@ -70,7 +71,7 @@ app.get("/api/health", (req, res) => {
 // -------------------------------------------------------------
 // 1. API Endpoint: Orchestrate Action Request
 // -------------------------------------------------------------
-app.post("/api/orchestrate", async (req, res) => {
+app.post(["/api/orchestrate", "/orchestrate"], async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt || typeof prompt !== "string") {
@@ -179,7 +180,7 @@ You must always output a JSON schema match. Ensure elements are highly technical
 // -------------------------------------------------------------
 // 2. API Endpoint: Ask the Architect Chat
 // -------------------------------------------------------------
-app.post("/api/chat", async (req, res) => {
+app.post(["/api/chat", "/chat"], async (req, res) => {
   try {
     const { message, history } = req.body;
     if (!message || typeof message !== "string") {
@@ -241,7 +242,7 @@ Answer questions concisely, professionally, and with depth. Use markdown for lis
 // -------------------------------------------------------------
 // 3. API Endpoint: Multi-Platform Ad Sentiment & Strategy Analysis (X, Facebook, TikTok, Amazon, eBay)
 // -------------------------------------------------------------
-app.post("/api/grok/analyze-ad", async (req, res) => {
+app.post(["/api/grok/analyze-ad", "/grok/analyze-ad"], async (req, res) => {
   try {
     const { adCopy, targetAudience, platform = "x" } = req.body;
     if (!adCopy || typeof adCopy !== "string") {
@@ -417,7 +418,8 @@ let mockNotifications: RenewalNotification[] = [
 ];
 
 // Get collective emulated subscription server state
-app.get("/api/paypal/state", (req, res) => {
+app.get(["/api/paypal/state", "/paypal/state"], (req, res) => {
+  res.setHeader("Content-Type", "application/json");
   res.json({
     currentUserId,
     users: mockUsers,
@@ -428,7 +430,7 @@ app.get("/api/paypal/state", (req, res) => {
 });
 
 // Switch emulated user account
-app.post("/api/paypal/user/select", (req, res) => {
+app.post(["/api/paypal/user/select", "/paypal/user/select"], (req, res) => {
   const { userId } = req.body;
   const userExists = mockUsers.find(u => u.id === userId);
   if (!userExists) {
@@ -440,7 +442,7 @@ app.post("/api/paypal/user/select", (req, res) => {
 });
 
 // Initialize approval pending PayPal Subscription
-app.post("/api/paypal/subscription/create", (req, res) => {
+app.post(["/api/paypal/subscription/create", "/paypal/subscription/create"], (req, res) => {
   const { planId, billingCycle } = req.body;
   const plan = mockPlans.find(p => p.id === planId);
   if (!plan) {
@@ -480,7 +482,7 @@ app.post("/api/paypal/subscription/create", (req, res) => {
 });
 
 // Complete Paypal transaction (Simulate user clicks 'Approve')
-app.post("/api/paypal/subscription/approve", (req, res) => {
+app.post(["/api/paypal/subscription/approve", "/paypal/subscription/approve"], (req, res) => {
   const { subscriptionId } = req.body;
   const sub = mockSubscriptions.find(s => s.id === subscriptionId);
   if (!sub) {
@@ -528,7 +530,7 @@ app.post("/api/paypal/subscription/approve", (req, res) => {
 });
 
 // Cancel active subscription
-app.post("/api/paypal/subscription/cancel", (req, res) => {
+app.post(["/api/paypal/subscription/cancel", "/paypal/subscription/cancel"], (req, res) => {
   const { subscriptionId } = req.body;
   const sub = mockSubscriptions.find(s => s.id === subscriptionId);
   if (!sub) {
@@ -553,7 +555,7 @@ app.post("/api/paypal/subscription/cancel", (req, res) => {
 });
 
 // Force automated renewal / billing simulator
-app.post("/api/paypal/subscription/simulate-renewal", (req, res) => {
+app.post(["/api/paypal/subscription/simulate-renewal", "/paypal/subscription/simulate-renewal"], (req, res) => {
   const { subscriptionId, simulateFailure } = req.body;
   const sub = mockSubscriptions.find(s => s.id === subscriptionId);
   if (!sub) {
@@ -599,7 +601,7 @@ app.post("/api/paypal/subscription/simulate-renewal", (req, res) => {
 });
 
 // Simulated PayPal Webhook Listener Endpoint
-app.post("/api/paypal/webhook", (req, res) => {
+app.post(["/api/paypal/webhook", "/paypal/webhook"], (req, res) => {
   const { event_type, resource } = req.body;
   if (!event_type) {
     res.status(400).json({ error: "Missing PayPal event_type payload wrapper." });
