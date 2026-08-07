@@ -85,29 +85,26 @@ export default function App() {
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-4 font-mono text-xs">
-            <a href="#orchestration" className="text-slate-400 hover:text-white transition-colors">
-              // Loop
+          <div className="hidden md:flex items-center gap-5 font-sans text-xs font-semibold">
+            <a href="#orchestration" className="text-slate-300 hover:text-white transition-colors">
+              Features
             </a>
-            <a href="#directory" className="text-slate-400 hover:text-white transition-colors">
-              // Shops
+            <a href="#directory" className="text-slate-300 hover:text-white transition-colors">
+              Directory
             </a>
             <a href="#ads" className="text-indigo-400 hover:text-white transition-colors font-bold flex items-center gap-1">
-              // Grok Ads
+              Grok Ads
             </a>
-            <a href="#diagnostics" className="text-emerald-400 hover:text-white transition-colors font-bold flex items-center gap-1">
-              // Live Diagnostics
+            <a href="#vault" className="text-slate-300 hover:text-white transition-colors">
+              Security & Vault
             </a>
-            <a href="#sandbox" className="text-slate-400 hover:text-white transition-colors">
-              // Brain
-            </a>
-            <a href="#vault" className="text-slate-400 hover:text-white transition-colors">
-              // Vault
+            <a href="#pricing" className="text-slate-300 hover:text-white transition-colors">
+              Plans
             </a>
             <span className="text-slate-700 shrink-0">|</span>
             <button
               onClick={() => setIsSignUpOpen(true)}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition-all hover:scale-105"
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition-all hover:scale-105 cursor-pointer font-mono text-xs"
             >
               <UserPlus className="h-3.5 w-3.5 text-indigo-200" /> Sign Up
             </button>

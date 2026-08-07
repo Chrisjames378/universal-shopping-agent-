@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
-export type ApiHealthStatus = "online" | "degraded" | "offline";
+export type ApiHealthStatus = "online" | "decoupled" | "degraded" | "offline";
 
 export interface EndpointHealth {
   endpoint: string;
@@ -182,7 +182,8 @@ export function useApiHeartbeat(intervalMs: number = 12000): ApiHeartbeatState {
       setConsecutiveFailures(prev => prev + 1);
       setLatencyMs(null);
       setMode("client_decoupled");
-      setStatus("offline");
+      // Use 'decoupled' state to indicate client autonomous engine is active without alarming red status
+      setStatus("decoupled");
     }
 
     setIsPinging(false);

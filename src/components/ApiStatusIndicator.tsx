@@ -54,6 +54,8 @@ export default function ApiStatusIndicator() {
         className={`group flex items-center gap-2 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-all duration-200 cursor-pointer ${
           status === "online"
             ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50"
+            : status === "decoupled"
+            ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/25 hover:border-indigo-500/60 shadow-lg shadow-indigo-950/40"
             : status === "degraded"
             ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:border-amber-500/50"
             : "bg-red-500/15 border-red-500/40 text-red-300 hover:bg-red-500/25 hover:border-red-500/60 shadow-lg shadow-red-950/40"
@@ -65,6 +67,12 @@ export default function ApiStatusIndicator() {
             <>
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </>
+          )}
+          {status === "decoupled" && (
+            <>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-400"></span>
             </>
           )}
           {status === "degraded" && (
@@ -94,6 +102,13 @@ export default function ApiStatusIndicator() {
             </>
           )}
 
+          {status === "decoupled" && (
+            <>
+              <Cpu className="w-3 h-3 text-indigo-400 animate-pulse" />
+              <span>Client AI Engine</span>
+            </>
+          )}
+
           {status === "degraded" && (
             <>
               <AlertTriangle className="w-3 h-3 text-amber-400" />
@@ -112,11 +127,11 @@ export default function ApiStatusIndicator() {
         <ChevronDown className={`w-3 h-3 opacity-60 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
-      {/* Persistent Warning Banner under pill if Unreachable */}
-      {status === "offline" && !isOpen && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 whitespace-nowrap bg-red-950/90 text-red-200 border border-red-500/40 text-[9px] font-mono px-2 py-0.5 rounded shadow-xl backdrop-blur pointer-events-none z-50 flex items-center gap-1">
-          <ShieldAlert className="w-2.5 h-2.5 text-red-400 shrink-0" />
-          <span>Backend offline — Client Fallback active</span>
+      {/* Optional subtle status indicator tooltip */}
+      {status === "decoupled" && !isOpen && (
+        <div className="absolute top-full right-0 mt-1 whitespace-nowrap bg-indigo-950/90 text-indigo-200 border border-indigo-500/30 text-[9px] font-mono px-2 py-0.5 rounded shadow-xl backdrop-blur pointer-events-none z-50 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Cpu className="w-2.5 h-2.5 text-indigo-400 shrink-0" />
+          <span>Client Autonomous Engine Active</span>
         </div>
       )}
 
@@ -143,14 +158,24 @@ export default function ApiStatusIndicator() {
           </div>
 
           {/* Status Alert Banner */}
-          {status === "offline" ? (
+          {status === "decoupled" ? (
+            <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-200 space-y-1">
+              <div className="flex items-center gap-2 font-bold text-indigo-300 text-xs font-display uppercase tracking-wide">
+                <Cpu className="w-4 h-4 text-indigo-400 shrink-0" />
+                Autonomous Client Engine Active
+              </div>
+              <p className="text-[11px] leading-relaxed text-slate-300">
+                Operating in browser autonomous engine mode with local Gemini AI execution and client orchestration on <code className="bg-indigo-950/80 text-indigo-300 px-1 py-0.5 rounded font-mono text-[10px]">uniagent.website</code>.
+              </p>
+            </div>
+          ) : status === "offline" ? (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 space-y-1">
               <div className="flex items-center gap-2 font-bold text-red-400 text-xs font-display uppercase tracking-wide">
                 <WifiOff className="w-4 h-4 text-red-400 shrink-0" />
                 Backend Unreachable
               </div>
               <p className="text-[11px] leading-relaxed text-red-300/90">
-                The orchestration microservice endpoint (<code className="bg-red-950/60 px-1 py-0.5 rounded font-mono text-[10px]">/api/*</code>) is unreachable. The application has automatically engaged client-side intent execution so you can continue using the platform seamlessly.
+                The orchestration microservice endpoint (<code className="bg-red-950/60 px-1 py-0.5 rounded font-mono text-[10px]">/api/*</code>) is unreachable. The application has automatically engaged client-side intent execution.
               </p>
             </div>
           ) : status === "degraded" ? (
