@@ -32,6 +32,7 @@ import ArchitectChat from "./components/ArchitectChat";
 import SubscriptionManager from "./components/SubscriptionManager";
 import ShoppingDirectory from "./components/ShoppingDirectory";
 import ApiStatusIndicator from "./components/ApiStatusIndicator";
+import GatewayStatus from "./components/GatewayStatus";
 import GrokAdAdvisor from "./components/GrokAdAdvisor";
 import SignUpModal from "./components/SignUpModal";
 import DiagnosticUtility from "./components/DiagnosticUtility";
@@ -85,13 +86,14 @@ export default function App() {
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-4 font-sans text-xs font-semibold">
+          <div className="hidden md:flex items-center gap-3 font-sans text-xs font-semibold">
             <button
               onClick={() => setIsSignUpOpen(true)}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/25 transition-all hover:scale-105 cursor-pointer font-mono text-xs"
             >
               <UserPlus className="h-4 w-4 text-indigo-200" /> Sign Up
             </button>
+            <GatewayStatus />
             <ApiStatusIndicator />
           </div>
         </div>

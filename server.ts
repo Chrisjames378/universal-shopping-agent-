@@ -6,11 +6,49 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
+import { generateText } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { GoogleGenAI, Type } from "@google/genai";
 import type { UserAccount, PayPalSubscription, SubscriptionPlan, RenewalNotification } from "./src/types";
 
 // Load local environment variables if available
+dotenv.config({ path: ".env.local" });
 dotenv.config();
+
+// Supported Vercel AI Gateway Models Catalog
+const AI_GATEWAY_MODELS: Record<string, string> = {
+  "gpt-5.4": "openai/gpt-5.4",
+  "gpt-4o": "openai/gpt-4o",
+  "claude-3.7": "anthropic/claude-3-7-sonnet",
+  "gemini-2.5": "google/gemini-2.5-flash",
+  "grok-2": "xai/grok-2",
+  "grok-3": "xai/grok-3",
+  "deepseek-r1": "deepseek/deepseek-r1",
+  "deepseek-chat": "deepseek/deepseek-chat",
+};
+
+function isValidAiGatewayKey(key?: string) {
+  if (!key) return false;
+  const trimmed = key.trim();
+  if (trimmed.length < 10) return false;
+  if (trimmed.includes("YOUR_") || trimmed.includes("placeholder") || trimmed.includes("MOCK_")) return false;
+  return true;
+}
+
+function getActiveAiGatewayKey(): string {
+  const gatewayKey = process.env.AI_GATEWAY_API_KEY;
+  if (isValidAiGatewayKey(gatewayKey)) return gatewayKey!;
+  return "";
+}
+
+// Initialize Vercel AI Gateway Client
+function getAiGatewayClient() {
+  const activeKey = getActiveAiGatewayKey();
+  return createOpenAI({
+    apiKey: activeKey || "placeholder-key",
+    baseURL: process.env.AI_GATEWAY_URL || "https://ai.gateway.vercel.dev/v1",
+  });
+}
 
 const app = express();
 
@@ -66,6 +104,70 @@ app.get(["/api/health", "/health"], (req, res) => {
     hasApiKey,
     mode: hasApiKey ? "live_gemini" : "fallback_simulation"
   });
+});
+
+// -------------------------------------------------------------
+// 0.5. API Endpoint: Vercel AI Gateway Multi-Model Router
+// -------------------------------------------------------------
+app.get(["/api/gateway/models", "/gateway/models"], (req, res) => {
+  const hasGatewayKey = !!(process.env.AI_GATEWAY_API_KEY || process.env.OPENAI_API_KEY);
+  res.json({
+    hasGatewayKey,
+    supportedModels: AI_GATEWAY_MODELS,
+    availableProviders: [
+      "OpenAI (GPT-5.4, GPT-4o)",
+      "Anthropic (Claude 3.7 Sonnet)",
+      "Google (Gemini 2.5 Flash)",
+      "xAI (Grok-2, Grok-3)",
+      "DeepSeek (DeepSeek R1, DeepSeek Chat)"
+    ]
+  });
+});
+
+app.post(["/api/gateway/generate", "/gateway/generate"], async (req, res) => {
+  try {
+    const { model = "gpt-5.4", prompt, system } = req.body;
+    if (!prompt || typeof prompt !== "string") {
+      res.status(400).json({ error: "Missing or invalid prompt string in request body." });
+      return;
+    }
+
+    const resolvedModelId = AI_GATEWAY_MODELS[model] || model;
+    const activeKey = getActiveAiGatewayKey();
+    const hasValidKey = !!activeKey;
+
+    if (!hasValidKey) {
+      res.json({
+        model: resolvedModelId,
+        text: `[Simulation Mode for ${resolvedModelId}]: Vercel AI Gateway received prompt: "${prompt}". Configure AI_GATEWAY_API_KEY in .env.local to route live multi-model tokens across GPT-5.4, Claude 3.7, Gemini 2.5, Grok, and DeepSeek.`,
+        isMocked: true,
+        usage: { promptTokens: 24, completionTokens: 48, totalTokens: 72 }
+      });
+      return;
+    }
+
+    const client = getAiGatewayClient();
+    const modelClient = client.chat ? client.chat(resolvedModelId) : client(resolvedModelId);
+    const result = await generateText({
+      model: modelClient,
+      prompt,
+      system: system || "You are an AI assistant powered by Vercel AI Gateway.",
+    });
+
+    res.json({
+      model: resolvedModelId,
+      text: result.text,
+      usage: result.usage,
+      isMocked: false
+    });
+  } catch (err: any) {
+    console.error("AI Gateway generate error:", err);
+    res.status(500).json({
+      error: "AI Gateway Routing Failed",
+      details: err?.message || String(err),
+      hint: "Verify model target availability and AI_GATEWAY_API_KEY in .env.local"
+    });
+  }
 });
 
 // -------------------------------------------------------------
