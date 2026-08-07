@@ -244,7 +244,13 @@ export default function ApiStatusIndicator() {
             </div>
 
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-500">
-              <span>Background Heartbeat: 10s</span>
+              <a 
+                href="#diagnostics" 
+                onClick={() => setIsOpen(false)}
+                className="text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1"
+              >
+                Launch Diagnostic Tool
+              </a>
               <button
                 onClick={() => pingNow()}
                 className="text-indigo-400 hover:text-indigo-300 underline cursor-pointer"

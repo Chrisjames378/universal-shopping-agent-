@@ -34,6 +34,7 @@ import ShoppingDirectory from "./components/ShoppingDirectory";
 import ApiStatusIndicator from "./components/ApiStatusIndicator";
 import GrokAdAdvisor from "./components/GrokAdAdvisor";
 import SignUpModal from "./components/SignUpModal";
+import DiagnosticUtility from "./components/DiagnosticUtility";
 
 export default function App() {
   const [activeBarrier, setActiveBarrier] = useState<"dom" | "bot" | "trust" | null>("dom");
@@ -93,6 +94,9 @@ export default function App() {
             </a>
             <a href="#ads" className="text-indigo-400 hover:text-white transition-colors font-bold flex items-center gap-1">
               // Grok Ads
+            </a>
+            <a href="#diagnostics" className="text-emerald-400 hover:text-white transition-colors font-bold flex items-center gap-1">
+              // Live Diagnostics
             </a>
             <a href="#sandbox" className="text-slate-400 hover:text-white transition-colors">
               // Brain
@@ -183,6 +187,9 @@ export default function App() {
             helperText="TLS ja3 Fingerprints active"
           />
         </section>
+
+        {/* Real-time Connectivity & Diagnostic Suite */}
+        <DiagnosticUtility />
 
         <hr className="border-slate-900" />
 
