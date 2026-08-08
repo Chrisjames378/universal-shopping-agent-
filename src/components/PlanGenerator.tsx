@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { Sparkles, FileJson, PlayCircle, Loader2, AlertCircle, ShieldAlert, Cpu, Award } from "lucide-react";
 import { ExecutionPlan } from "../types";
 import { deconstructQueryClient } from "../lib/clientFallback";
+import { safeResponseJson } from "../lib/safeFetch";
 
 const PRESETS = [
   "Find me a vegan gluten-free pizza under $25 near downtown and order it...",
@@ -105,9 +106,8 @@ export default function PlanGenerator({ externalPrompt }: PlanGeneratorProps = {
           body: JSON.stringify({ prompt: prompt.trim() })
         });
 
-        const contentType = response.headers.get("content-type");
-        if (response.ok && contentType && contentType.includes("application/json")) {
-          data = await response.json();
+        if (response.ok) {
+          data = await safeResponseJson(response);
         }
       } catch (_) {
         // Ignore network errors and use fallback

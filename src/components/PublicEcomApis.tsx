@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { safeResponseJson } from "../lib/safeFetch";
 import { 
   Globe, 
   Sparkles, 
@@ -45,7 +46,8 @@ export default function PublicEcomApis({ onSelectPrompt }: PublicEcomApisProps) 
     try {
       const res = await fetch("https://fakestoreapi.com/products?limit=10");
       if (!res.ok) throw new Error("Failed to fetch FakeStore API data");
-      const data = await res.json();
+      const data = await safeResponseJson(res);
+      if (!data) throw new Error("FakeStore API returned non-JSON format");
       setFakeStoreProducts(data);
     } catch (err: any) {
       setError(err.message || "Failed to load FakeStore API");
@@ -61,7 +63,8 @@ export default function PublicEcomApis({ onSelectPrompt }: PublicEcomApisProps) 
     try {
       const res = await fetch("https://dummyjson.com/products?limit=12");
       if (!res.ok) throw new Error("Failed to fetch DummyJSON API data");
-      const data = await res.json();
+      const data = await safeResponseJson(res);
+      if (!data) throw new Error("DummyJSON API returned non-JSON format");
       setDummyJsonProducts(data.products || []);
     } catch (err: any) {
       setError(err.message || "Failed to load DummyJSON API");
@@ -78,7 +81,8 @@ export default function PublicEcomApis({ onSelectPrompt }: PublicEcomApisProps) 
       const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch Open Food Facts API");
-      const data = await res.json();
+      const data = await safeResponseJson(res);
+      if (!data) throw new Error("Open Food Facts API returned non-JSON format");
       setFoodFactsProducts(data.products || []);
     } catch (err: any) {
       setError(err.message || "Failed to load Open Food Facts API");

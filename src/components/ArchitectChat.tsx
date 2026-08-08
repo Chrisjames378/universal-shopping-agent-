@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { MessageSquare, Send, X, Bot, ShieldAlert, Sparkles, AlertTriangle, CornerDownLeft } from "lucide-react";
 import { Message } from "../types";
 import { getArchitectReplyClient } from "../lib/clientFallback";
+import { safeResponseJson } from "../lib/safeFetch";
 
 export default function ArchitectChat() {
   const [chatOpen, setChatOpen] = useState<boolean>(false);
@@ -61,9 +62,8 @@ export default function ArchitectChat() {
           })
         });
 
-        const contentType = response.headers.get("content-type");
-        if (response.ok && contentType && contentType.includes("application/json")) {
-          const data = await response.json();
+        if (response.ok) {
+          const data = await safeResponseJson(response);
           if (data && data.response) {
             replyText = data.response;
           }

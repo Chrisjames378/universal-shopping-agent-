@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { safeResponseJson } from "./safeFetch";
 
 export type ApiHealthStatus = "online" | "decoupled" | "degraded" | "offline";
 
@@ -95,18 +96,20 @@ export function useApiHeartbeat(intervalMs: number = 12000): ApiHeartbeatState {
       const healthLatency = Math.round(performance.now() - healthStart);
 
       if (res.ok && isJson) {
-        const body = await res.json();
-        isHealthOk = true;
-        measuredLatency = healthLatency;
-        serverMode = body.mode || (body.hasApiKey ? "live_gemini" : "fallback_simulation");
-        apiKeyDetected = !!body.hasApiKey;
+        const body = await safeResponseJson(res);
+        if (body) {
+          isHealthOk = true;
+          measuredLatency = healthLatency;
+          serverMode = body.mode || (body.hasApiKey ? "live_gemini" : "fallback_simulation");
+          apiKeyDetected = !!body.hasApiKey;
 
-        currentEndpoints.push({
-          endpoint: "/api/health (Gemini AI Brain)",
-          ok: true,
-          status: res.status,
-          latencyMs: healthLatency
-        });
+          currentEndpoints.push({
+            endpoint: "/api/health (Gemini AI Brain)",
+            ok: true,
+            status: res.status,
+            latencyMs: healthLatency
+          });
+        }
       } else {
         currentEndpoints.push({
           endpoint: "/api/health (Gemini AI Brain)",

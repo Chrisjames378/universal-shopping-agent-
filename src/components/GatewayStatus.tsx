@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
+import { safeResponseJson } from "../lib/safeFetch";
 import {
   Zap,
   Cpu,
@@ -128,11 +129,13 @@ export default function GatewayStatus({ forceShow, className = "" }: GatewayStat
       const elapsed = Math.round(endTime - startTime);
 
       if (res.ok) {
-        const data = await res.json();
-        setHasGatewayKey(!!data.hasGatewayKey);
-        setLatencyMs(elapsed);
-        setLatencyHistory((prev) => [...prev.slice(-9), elapsed]);
-        setLastChecked(new Date());
+        const data = await safeResponseJson(res);
+        if (data) {
+          setHasGatewayKey(!!data.hasGatewayKey);
+          setLatencyMs(elapsed);
+          setLatencyHistory((prev) => [...prev.slice(-9), elapsed]);
+          setLastChecked(new Date());
+        }
       } else {
         setLatencyMs(elapsed);
       }
@@ -178,12 +181,11 @@ export default function GatewayStatus({ forceShow, className = "" }: GatewayStat
       setLatencyHistory((prev) => [...prev.slice(-9), elapsed]);
       setLastChecked(new Date());
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({ error: "Gateway HTTP error" }));
-        throw new Error(errData.details || errData.error || `HTTP ${res.status}`);
+      const data = await safeResponseJson(res);
+      if (!res.ok || !data) {
+        throw new Error((data && (data.details || data.error)) || `HTTP status ${res.status}`);
       }
 
-      const data = await res.json();
       setTestOutput(data.text || "No response text returned.");
 
       if (data.usage) {

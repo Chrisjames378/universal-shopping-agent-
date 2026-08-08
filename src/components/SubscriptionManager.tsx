@@ -31,33 +31,7 @@ import {
   cancelClientSubscription, 
   simulateClientRenewal 
 } from "../lib/clientFallback";
-
-// Helper to perform safe fetch and assert JSON response content type to handle transient server startup states
-async function safeJsonFetch(url: string, options?: RequestInit) {
-  const response = await fetch(url, options);
-  
-  if (!response.ok) {
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      try {
-        const errJson = await response.json();
-        throw new Error(errJson.error || errJson.message || `HTTP error status ${response.status}`);
-      } catch (e: any) {
-        if (e.message && !e.message.includes("HTTP error")) {
-          throw e;
-        }
-      }
-    }
-    throw new Error(`HTTP error status ${response.status}`);
-  }
-
-  const contentType = response.headers.get("content-type");
-  if (!contentType || !contentType.includes("application/json")) {
-    throw new TypeError("Response format was not JSON (the server might be restarting or compiling).");
-  }
-
-  return response.json();
-}
+import { safeJsonFetch } from "../lib/safeFetch";
 
 export default function SubscriptionManager() {
   const [users, setUsers] = useState<UserAccount[]>([]);

@@ -7,6 +7,7 @@ import React, { useState, useMemo } from "react";
 import { Megaphone, Search, TrendingUp, MessageSquare, Check, Loader2, Sparkles, AlertCircle, BarChart2, DollarSign, MousePointerClick, Activity, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import { getGrokAnalysisClient } from "../lib/clientFallback";
+import { safeResponseJson } from "../lib/safeFetch";
 
 // Helper to generate realistic 30-day historical metrics
 function generate30DayMetrics(adScore: number = 78) {
@@ -90,9 +91,8 @@ export default function GrokAdAdvisor() {
           body: JSON.stringify({ adCopy, targetAudience, platform: selectedPlatform })
         });
 
-        const contentType = response.headers.get("content-type");
-        if (response.ok && contentType && contentType.includes("application/json")) {
-          const json = await response.json();
+        if (response.ok) {
+          const json = await safeResponseJson(response);
           if (json && !json.error && Array.isArray(json.improvements)) {
             resultData = json;
           }
