@@ -503,7 +503,132 @@ Provide your feedback as a strictly formatted JSON object with the following fie
   }
 });
 
-// Helper: fallback mock plan builder
+// -------------------------------------------------------------
+// 3.5 API Endpoint: Shopify Storefront GraphQL Proxy & Sandbox
+// -------------------------------------------------------------
+app.post(["/api/shopify/storefront", "/shopify/storefront"], async (req, res) => {
+  try {
+    const { shopDomain, accessToken, query, variables } = req.body || {};
+
+    // If real shop credentials provided, forward query to Shopify Storefront API
+    if (shopDomain && accessToken && query) {
+      const cleanDomain = shopDomain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+      const shopifyUrl = `https://${cleanDomain}/api/2024-04/graphql.json`;
+
+      try {
+        const response = await fetch(shopifyUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Shopify-Storefront-Access-Token": accessToken
+          },
+          body: JSON.stringify({ query, variables })
+        });
+
+        if (response.ok) {
+          const shopifyData = await response.json();
+          res.json({
+            status: "success",
+            source: "live_shopify_api",
+            domain: cleanDomain,
+            data: shopifyData.data,
+            errors: shopifyData.errors
+          });
+          return;
+        }
+      } catch (err: any) {
+        console.warn("Direct Shopify fetch failed, falling back to sandbox emulator:", err.message);
+      }
+    }
+
+    // Default Sandbox/Emulator Response when no credentials provided or on fallback
+    res.json({
+      status: "success",
+      source: "shopify_sandbox_emulator",
+      domain: shopDomain || "demo-store.myshopify.com",
+      data: {
+        products: {
+          edges: [
+            {
+              node: {
+                id: "gid://shopify/Product/8492019381",
+                title: "AI-Powered RGB Mechanical Keyboard",
+                handle: "ai-rgb-mechanical-keyboard",
+                description: "Hot-swappable custom tactile keyboard with programmable AI shortcuts.",
+                priceRange: {
+                  minVariantPrice: { amount: "149.99", currencyCode: "USD" }
+                },
+                images: {
+                  edges: [{ node: { url: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500&q=80" } }]
+                },
+                variants: {
+                  edges: [{ node: { id: "gid://shopify/ProductVariant/4201938101", title: "Wireless / Tactile Switches", availableForSale: true } }]
+                }
+              }
+            },
+            {
+              node: {
+                id: "gid://shopify/Product/8492019382",
+                title: "Smart Ambient Desktop Light Strip",
+                handle: "smart-ambient-light-strip",
+                description: "Reactive LED illumination synced with screen colors and AI voice control.",
+                priceRange: {
+                  minVariantPrice: { amount: "69.00", currencyCode: "USD" }
+                },
+                images: {
+                  edges: [{ node: { url: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500&q=80" } }]
+                },
+                variants: {
+                  edges: [{ node: { id: "gid://shopify/ProductVariant/4201938102", title: "2 Meter / USB-C", availableForSale: true } }]
+                }
+              }
+            },
+            {
+              node: {
+                id: "gid://shopify/Product/8492019383",
+                title: "Ergonomic Pro Desk Chair",
+                handle: "ergonomic-pro-desk-chair",
+                description: "Lumbar support mesh office chair designed for extended coding and editing.",
+                priceRange: {
+                  minVariantPrice: { amount: "329.50", currencyCode: "USD" }
+                },
+                images: {
+                  edges: [{ node: { url: "https://images.unsplash.com/photo-1580481072645-022f9a6d8310?w=500&q=80" } }]
+                },
+                variants: {
+                  edges: [{ node: { id: "gid://shopify/ProductVariant/4201938103", title: "Midnight Black / Mesh", availableForSale: true } }]
+                }
+              }
+            },
+            {
+              node: {
+                id: "gid://shopify/Product/8492019384",
+                title: "Wireless ANC Noise Cancelling Headphones",
+                handle: "wireless-anc-headphones",
+                description: "High-resolution studio audio with active noise isolation and 40-hour battery.",
+                priceRange: {
+                  minVariantPrice: { amount: "199.99", currencyCode: "USD" }
+                },
+                images: {
+                  edges: [{ node: { url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80" } }]
+                },
+                variants: {
+                  edges: [{ node: { id: "gid://shopify/ProductVariant/4201938104", title: "Space Gray", availableForSale: true } }]
+                }
+              }
+            }
+          ]
+        },
+        cart: {
+          id: "gid://shopify/Cart/c1-987239182391",
+          checkoutUrl: "https://checkout.shopify.com/storefront-demo/cart/c/123456789?key=shopify_ai_agent_checkout"
+        }
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: "Shopify Storefront proxy internal error", details: err.message });
+  }
+});
 function mockDeconstructQuery(query: string) {
   const isVegan = /vegan/i.test(query);
   const isGf = /gluten|gf/i.test(query);
