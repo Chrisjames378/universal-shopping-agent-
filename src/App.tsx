@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   ShieldCheck, 
   Cpu, 
@@ -20,7 +20,12 @@ import {
   Lightbulb,
   Megaphone,
   UserPlus,
-  Globe
+  Globe,
+  Lock,
+  Unlock,
+  Eye,
+  EyeOff,
+  Key
 } from "lucide-react";
 
 import MetricCard from "./components/MetricCard";
@@ -41,6 +46,36 @@ export default function App() {
   const [activeBarrier, setActiveBarrier] = useState<"dom" | "bot" | "trust" | null>("dom");
   const [sharedPrompt, setSharedPrompt] = useState<string>("");
   const [isSignUpOpen, setIsSignUpOpen] = useState<boolean>(false);
+
+  // Admin / Owner Visibility Controls for Ad Campaigns
+  const [isAdminMode, setIsAdminMode] = useState<boolean>(() => {
+    return localStorage.getItem("uniagent_admin_owner") === "true" || true;
+  });
+  const [showAdCampaigns, setShowAdCampaigns] = useState<boolean>(() => {
+    return localStorage.getItem("uniagent_show_ads") !== "false";
+  });
+  const [showAdminPinModal, setShowAdminPinModal] = useState<boolean>(false);
+  const [enteredPin, setEnteredPin] = useState<string>("");
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("uniagent_admin_owner", isAdminMode ? "true" : "false");
+  }, [isAdminMode]);
+
+  useEffect(() => {
+    localStorage.setItem("uniagent_show_ads", showAdCampaigns ? "true" : "false");
+  }, [showAdCampaigns]);
+
+  const handleUnlockAdmin = () => {
+    if (enteredPin === "0000" || enteredPin.trim().toLowerCase() === "admin") {
+      setIsAdminMode(true);
+      setShowAdminPinModal(false);
+      setEnteredPin("");
+      setPinError(null);
+    } else {
+      setPinError("Invalid PIN. (Default Owner PIN is 0000)");
+    }
+  };
 
   // Dynamic feedback descriptors for barriers
   const barrierDetails = {
@@ -87,6 +122,42 @@ export default function App() {
           </div>
 
           <div className="hidden md:flex items-center gap-3 font-sans text-xs font-semibold">
+            {/* Owner/Admin Visibility Toggle */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-900 rounded-xl border border-slate-800 font-mono text-[11px]">
+              {isAdminMode ? (
+                <>
+                  <button
+                    onClick={() => setShowAdCampaigns(!showAdCampaigns)}
+                    className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all ${
+                      showAdCampaigns 
+                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30" 
+                        : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
+                    title={showAdCampaigns ? "Ad Campaigns button & section are VISIBLE" : "Ad Campaigns button & section are HIDDEN"}
+                  >
+                    {showAdCampaigns ? <Eye className="h-3.5 w-3.5 text-indigo-200" /> : <EyeOff className="h-3.5 w-3.5 text-slate-400" />}
+                    <span>{showAdCampaigns ? "Ads Visible" : "Ads Hidden"}</span>
+                  </button>
+                  <button
+                    onClick={() => setIsAdminMode(false)}
+                    className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-amber-400 transition-colors"
+                    title="Lock Admin Mode (Lock visibility settings)"
+                  >
+                    <Unlock className="h-3.5 w-3.5 text-emerald-400" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowAdminPinModal(true)}
+                  className="px-2.5 py-1 text-slate-400 hover:text-white flex items-center gap-1 font-bold transition-colors"
+                  title="Click to enter Owner PIN and access Admin Controls"
+                >
+                  <Lock className="h-3.5 w-3.5 text-amber-400" />
+                  <span>Owner Mode</span>
+                </button>
+              )}
+            </div>
+
             <button
               onClick={() => setIsSignUpOpen(true)}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/25 transition-all hover:scale-105 cursor-pointer font-mono text-xs"
@@ -122,12 +193,19 @@ export default function App() {
             >
               <UserPlus className="h-4 w-4 text-indigo-200" /> Sign Up to www.uniagent.website
             </button>
-            <a
-              href="#ads"
-              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl text-xs font-bold font-mono transition-colors"
-            >
-              🎯 Build Ad Campaigns
-            </a>
+            {showAdCampaigns && (
+              <a
+                href="#ads"
+                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl text-xs font-bold font-mono transition-colors flex items-center gap-1.5"
+              >
+                <span>🎯 Build Ad Campaigns</span>
+                {isAdminMode && (
+                  <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30 font-mono">
+                    Owner Only
+                  </span>
+                )}
+              </a>
+            )}
           </div>
         </section>
 
@@ -293,18 +371,31 @@ export default function App() {
           <ShoppingDirectory onSelectPrompt={setSharedPrompt} />
         </section>
 
-        {/* 5.8. Section 4: Multi-Platform Ad Strategy Advisor */}
-        <section id="ads" className="scroll-mt-20">
-          <div className="border-l-2 border-indigo-500 pl-3 mb-6">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wider font-display flex items-center gap-2">
-              <Megaphone className="w-5 h-5 text-indigo-400" />
-              4. Multi-Platform Ad Strategy Advisor (X, Meta, TikTok, Amazon, eBay)
-            </h2>
-            <p className="text-xs text-slate-400 font-mono">Optimize campaigns, ad copy, and search titles for X (Twitter), Facebook/Meta, TikTok, Amazon, and eBay</p>
-          </div>
+        {/* 5.8. Section 4: Multi-Platform Ad Strategy Advisor (Visible when showAdCampaigns is enabled) */}
+        {showAdCampaigns && (
+          <section id="ads" className="scroll-mt-20">
+            <div className="border-l-2 border-indigo-500 pl-3 mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white uppercase tracking-wider font-display flex items-center gap-2">
+                  <Megaphone className="w-5 h-5 text-indigo-400" />
+                  4. Multi-Platform Ad Strategy Advisor (X, Meta, TikTok, Amazon, eBay)
+                </h2>
+                <p className="text-xs text-slate-400 font-mono">Optimize campaigns, ad copy, and search titles for X (Twitter), Facebook/Meta, TikTok, Amazon, and eBay</p>
+              </div>
+              {isAdminMode && (
+                <button
+                  onClick={() => setShowAdCampaigns(false)}
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-amber-400 border border-slate-800 rounded text-[10px] font-mono flex items-center gap-1 transition-colors"
+                  title="Hide this section from visitors"
+                >
+                  <EyeOff className="h-3 w-3" /> Hide Section
+                </button>
+              )}
+            </div>
 
-          <GrokAdAdvisor />
-        </section>
+            <GrokAdAdvisor />
+          </section>
+        )}
 
         {/* 6. Section 4: The Brain Plan Generator */}
         <section id="sandbox" className="scroll-mt-20">
@@ -375,6 +466,73 @@ export default function App() {
         onClose={() => setIsSignUpOpen(false)}
         defaultDomain="www.uniagent.website"
       />
+
+      {/* Owner Mode Access Control PIN Modal */}
+      {showAdminPinModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
+            <button
+              onClick={() => {
+                setShowAdminPinModal(false);
+                setPinError(null);
+                setEnteredPin("");
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white text-xs font-mono"
+            >
+              ✕ Close
+            </button>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-amber-400 font-mono text-xs font-bold uppercase">
+                <Key className="h-4 w-4" /> Owner / Admin Access Lock
+              </div>
+              <h3 className="text-lg font-bold text-white font-display">
+                Unlock Owner Controls
+              </h3>
+              <p className="text-xs text-slate-400">
+                Enter your Owner Security PIN to toggle the visibility of the "Build Ad Campaigns" advisor and manage private tools.
+              </p>
+            </div>
+
+            <div className="space-y-3 font-mono text-xs">
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">
+                  Owner PIN Code (Default: 0000)
+                </label>
+                <input
+                  type="password"
+                  value={enteredPin}
+                  onChange={(e) => setEnteredPin(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleUnlockAdmin()}
+                  placeholder="Enter PIN..."
+                  autoFocus
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-center text-lg tracking-widest font-bold focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {pinError && (
+                <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs rounded-lg font-sans">
+                  {pinError}
+                </div>
+              )}
+
+              <button
+                onClick={handleUnlockAdmin}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30"
+              >
+                <Unlock className="h-4 w-4" /> Unlock Owner Controls
+              </button>
+
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
+                <div className="font-bold text-slate-300 flex items-center gap-1">
+                  💡 Quick Tip:
+                </div>
+                <div>Default PIN is <code className="text-indigo-400 font-bold">0000</code> or type <code className="text-indigo-400 font-bold">admin</code>. You can hide or reveal the Ad Advisor button anytime!</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
