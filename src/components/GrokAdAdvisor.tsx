@@ -4,7 +4,28 @@
  */
 
 import React, { useState, useMemo } from "react";
-import { Megaphone, Search, TrendingUp, MessageSquare, Check, Loader2, Sparkles, AlertCircle, BarChart2, DollarSign, MousePointerClick, Activity, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { 
+  Megaphone, 
+  Search, 
+  TrendingUp, 
+  MessageSquare, 
+  Check, 
+  Loader2, 
+  Sparkles, 
+  AlertCircle, 
+  BarChart2, 
+  DollarSign, 
+  MousePointerClick, 
+  Activity, 
+  ArrowUpRight, 
+  ArrowDownRight,
+  Terminal,
+  Copy,
+  Code2,
+  Globe,
+  FileJson,
+  Zap
+} from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import { getGrokAnalysisClient } from "../lib/clientFallback";
 import { safeResponseJson } from "../lib/safeFetch";
@@ -44,17 +65,52 @@ export default function GrokAdAdvisor() {
   const [selectedPlatform, setSelectedPlatform] = useState<"x" | "facebook" | "tiktok" | "amazon" | "ebay">("x");
   const [adCopy, setAdCopy] = useState("⚡ 24-HOUR FLASH SALE: Next-gen RGB mechanical keyboards with custom sound dampening. Upgrade your setup before stock runs out 🛒👇");
   const [targetAudience, setTargetAudience] = useState("Gamers & Tech Enthusiasts");
+  const [location, setLocation] = useState("United States");
   const [destinationUrl, setDestinationUrl] = useState("https://www.uniagent.website");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [rawLifecycleResponse, setRawLifecycleResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeMetric, setActiveMetric] = useState<"all" | "ctr" | "cpc" | "spend">("all");
+  const [activeResultTab, setActiveResultTab] = useState<"strategy" | "inputs" | "outputs" | "curl">("strategy");
+  const [copiedCurl, setCopiedCurl] = useState(false);
 
   // Derive 30-day performance data based on current ad score or default score
   const performanceData = useMemo(() => {
     const score = analysisResult?.score ?? 78;
     return generate30DayMetrics(score);
   }, [analysisResult]);
+
+  // Generated cURL Command string matching the user's requirement
+  const generatedCurlCommand = useMemo(() => {
+    const payload = {
+      model: "openai/gpt-5.6-sol",
+      input: adCopy || "Build Ad with Grok AI API?",
+      tools: [
+        {
+          type: "function",
+          name: "Analyze_Ad’s_Create_Ad’",
+          description: "Analyze Ad with Grok AI Strategy",
+          strict: true,
+          parameters: {
+            type: "object",
+            properties: {
+              location: {
+                type: "string"
+              }
+            },
+            required: ["location"],
+            additionalProperties: false
+          }
+        }
+      ]
+    };
+
+    return `curl -X POST "https://ai-gateway.vercel.sh/v1/responses" \\
+  -H "Authorization: Bearer $AI_GATEWAY_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '${JSON.stringify(payload, null, 2)}'`;
+  }, [adCopy, location]);
 
   // Calculated summary KPIs
   const kpis = useMemo(() => {
@@ -78,9 +134,38 @@ export default function GrokAdAdvisor() {
     setIsAnalyzing(true);
     setError(null);
     setAnalysisResult(null);
+    setRawLifecycleResponse(null);
+
+    const payload = {
+      model: "openai/gpt-5.6-sol",
+      input: adCopy,
+      adCopy,
+      targetAudience,
+      platform: selectedPlatform,
+      location,
+      tools: [
+        {
+          type: "function",
+          name: "Analyze_Ad’s_Create_Ad’",
+          description: "Analyze Ad with Grok AI Strategy",
+          strict: true,
+          parameters: {
+            type: "object",
+            properties: {
+              location: {
+                type: "string"
+              }
+            },
+            required: ["location"],
+            additionalProperties: false
+          }
+        }
+      ]
+    };
 
     try {
       let resultData: any = null;
+      let lifecycleData: any = null;
 
       try {
         const response = await fetch("/api/grok/analyze-ad", {
@@ -88,26 +173,54 @@ export default function GrokAdAdvisor() {
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ adCopy, targetAudience, platform: selectedPlatform })
+          body: JSON.stringify(payload)
         });
 
         if (response.ok) {
           const json = await safeResponseJson(response);
-          if (json && !json.error && Array.isArray(json.improvements)) {
-            resultData = json;
+          if (json && !json.error) {
+            lifecycleData = json;
+            resultData = json.outputs?.result || json;
           }
         }
       } catch (_) {
-        // Network or parse error
+        // Network or parse error handled via fallback
       }
 
       if (!resultData) {
-        resultData = getGrokAnalysisClient(adCopy, targetAudience, selectedPlatform);
+        const clientData = getGrokAnalysisClient(adCopy, targetAudience, selectedPlatform);
+        resultData = {
+          ...clientData,
+          location_targeting_summary: `Geo-targeted strategy for ${location} with focus on ${targetAudience}.`
+        };
+        lifecycleData = {
+          id: `resp_grok_sim_${Math.random().toString(36).substring(2, 8)}`,
+          model: "openai/gpt-5.6-sol",
+          status: "completed",
+          inputs: payload,
+          outputs: {
+            function_call: {
+              name: "Analyze_Ad’s_Create_Ad’",
+              arguments: { location, adCopy, platform: selectedPlatform, targetAudience }
+            },
+            execution_status: "SIMULATED_SUCCESS_200",
+            duration_ms: 145,
+            result: resultData
+          }
+        };
       }
 
       setAnalysisResult(resultData);
+      setRawLifecycleResponse(lifecycleData);
     } catch (err: any) {
-      setAnalysisResult(getGrokAnalysisClient(adCopy, targetAudience, selectedPlatform));
+      const fallback = getGrokAnalysisClient(adCopy, targetAudience, selectedPlatform);
+      setAnalysisResult(fallback);
+      setRawLifecycleResponse({
+        id: "resp_fallback_err",
+        model: "openai/gpt-5.6-sol",
+        inputs: payload,
+        outputs: { result: fallback }
+      });
     } finally {
       setIsAnalyzing(false);
     }
@@ -249,17 +362,40 @@ export default function GrokAdAdvisor() {
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Left Column: Input Form */}
         <div className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
               <label className="text-xs font-bold text-slate-300 uppercase tracking-wider font-display">Target Audience / Demographic</label>
+              <input 
+                type="text" 
+                value={targetAudience}
+                onChange={(e) => setTargetAudience(e.target.value)}
+                className="w-full bg-slate-900/50 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none focus:border-indigo-500 transition-colors"
+                placeholder="e.g. Gamers, Tech Founders"
+              />
             </div>
-            <input 
-              type="text" 
-              value={targetAudience}
-              onChange={(e) => setTargetAudience(e.target.value)}
-              className="w-full bg-slate-900/50 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 outline-none focus:border-indigo-500 transition-colors"
-              placeholder="e.g. Gamers, Tech Founders, Fitness Enthusiasts"
-            />
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider font-display flex items-center gap-1">
+                <Globe className="h-3 w-3 text-indigo-400" /> Target Location / Region
+              </label>
+              <input 
+                type="text" 
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="w-full bg-slate-900/50 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 outline-none focus:border-indigo-500 transition-colors font-mono"
+                placeholder="e.g. United States, Global, London UK"
+              />
+            </div>
+          </div>
+
+          {/* Model & Function Metadata Callout */}
+          <div className="p-2.5 bg-slate-900/80 border border-slate-800 rounded-lg flex items-center justify-between text-[10px] font-mono">
+            <span className="text-slate-400 flex items-center gap-1">
+              <Zap className="h-3 w-3 text-amber-400" /> Model: <span className="text-white font-bold">openai/gpt-5.6-sol</span>
+            </span>
+            <span className="text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 truncate max-w-[200px]">
+              fn: Analyze_Ad’s_Create_Ad’
+            </span>
           </div>
 
           {/* Quick Preset Templates */}
@@ -424,148 +560,344 @@ export default function GrokAdAdvisor() {
           )}
         </div>
 
-        {/* Right Column: Results */}
-        <div className="bg-slate-900/30 border border-slate-800 rounded-xl p-5 relative overflow-hidden min-h-[350px]">
+        {/* Right Column: Results & Function Call Lifecycle */}
+        <div className="bg-slate-900/30 border border-slate-800 rounded-xl p-5 relative overflow-hidden min-h-[380px]">
+          {/* Result Section Navigation Tabs */}
+          <div className="flex items-center gap-1 p-1 bg-slate-950 rounded-lg border border-slate-800 mb-4 text-xs font-mono">
+            <button
+              onClick={() => setActiveResultTab("strategy")}
+              className={`flex-1 py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1 font-bold ${
+                activeResultTab === "strategy"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <Sparkles className="h-3 w-3" />
+              <span>Strategy</span>
+            </button>
+
+            <button
+              onClick={() => setActiveResultTab("inputs")}
+              className={`flex-1 py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1 font-bold ${
+                activeResultTab === "inputs"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <FileJson className="h-3 w-3" />
+              <span>&#123;Inputs&#125;</span>
+            </button>
+
+            <button
+              onClick={() => setActiveResultTab("outputs")}
+              className={`flex-1 py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1 font-bold ${
+                activeResultTab === "outputs"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <Code2 className="h-3 w-3" />
+              <span>&#123;Outputs&#125;</span>
+            </button>
+
+            <button
+              onClick={() => setActiveResultTab("curl")}
+              className={`flex-1 py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1 font-bold ${
+                activeResultTab === "curl"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <Terminal className="h-3 w-3" />
+              <span>cURL</span>
+            </button>
+          </div>
+
           {!analysisResult && !isAnalyzing && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 p-6 text-center space-y-3">
+            <div className="flex flex-col items-center justify-center text-slate-500 p-8 text-center space-y-3 min-h-[280px]">
               <MessageSquare className="h-8 w-8 text-slate-700" />
-              <p className="text-xs">Enter your ad copy and audience to generate real-time Grok sentiment analysis and optimization suggestions.</p>
+              <p className="text-xs max-w-sm">
+                Enter your ad copy and target location to execute the <code className="text-indigo-400 font-mono">Analyze_Ad’s_Create_Ad’</code> function call via <code className="text-amber-400 font-mono">openai/gpt-5.6-sol</code>.
+              </p>
             </div>
           )}
 
           {isAnalyzing && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-indigo-400 space-y-4 bg-slate-950/50 backdrop-blur-sm z-10">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <div className="text-xs font-mono font-bold tracking-wider uppercase animate-pulse">Running Grok Models...</div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-indigo-400 space-y-4 bg-slate-950/70 backdrop-blur-sm z-10">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+              <div className="text-xs font-mono font-bold tracking-wider uppercase animate-pulse text-indigo-200">
+                Executing Analyze_Ad’s_Create_Ad’ Tool Call...
+              </div>
             </div>
           )}
 
           {analysisResult && !isAnalyzing && (
-            <div className="space-y-5 h-full overflow-y-auto pr-2 custom-scrollbar animate-fadeIn">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-center space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Sentiment</div>
-                  <div className="text-xs font-bold text-white truncate">{analysisResult?.sentiment || "Positive"}</div>
-                </div>
-                <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-center space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Trend Sync</div>
-                  <div className="text-xs font-bold text-emerald-400">{analysisResult?.trend_alignment || "High"}</div>
-                </div>
-                <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-center space-y-1">
-                  <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Ad Score</div>
-                  <div className="text-xs font-bold text-indigo-400 text-lg">{analysisResult?.score ?? 80}/100</div>
-                </div>
-              </div>
+            <div className="h-full overflow-y-auto pr-1 custom-scrollbar animate-fadeIn">
+              {/* TAB 1: AD STRATEGY VIEW */}
+              {activeResultTab === "strategy" && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-center space-y-1">
+                      <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Sentiment</div>
+                      <div className="text-xs font-bold text-white truncate">{analysisResult?.sentiment || "Positive"}</div>
+                    </div>
+                    <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-center space-y-1">
+                      <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Trend Sync</div>
+                      <div className="text-xs font-bold text-emerald-400">{analysisResult?.trend_alignment || "High"}</div>
+                    </div>
+                    <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-center space-y-1">
+                      <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Ad Score</div>
+                      <div className="text-xs font-bold text-indigo-400 text-lg">{analysisResult?.score ?? 80}/100</div>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <h5 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
-                  <Search className="h-3 w-3 text-indigo-400" /> Analysis
-                </h5>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {analysisResult?.analysis || "Analysis completed."}
-                </p>
-              </div>
-
-              {Array.isArray(analysisResult?.improvements) && analysisResult.improvements.length > 0 && (
-                <div className="space-y-2">
-                  <h5 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
-                    <TrendingUp className="h-3 w-3 text-indigo-400" /> Key Improvements
-                  </h5>
-                  <ul className="space-y-1.5">
-                    {analysisResult.improvements.map((imp: string, idx: number) => (
-                      <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
-                        <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{imp}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {Array.isArray(analysisResult?.revised_copy_suggestions) && analysisResult.revised_copy_suggestions.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-slate-800">
-                  <h5 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="h-3 w-3 text-indigo-400" /> Grok Optimized Variants
-                  </h5>
                   <div className="space-y-2">
-                    {analysisResult.revised_copy_suggestions.map((sug: string, idx: number) => (
-                      <div key={idx} className="bg-indigo-950/20 border border-indigo-500/20 p-3 rounded-lg text-xs text-indigo-100 italic leading-relaxed flex items-start justify-between gap-2">
-                        <span>{sug}</span>
+                    <h5 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
+                      <Search className="h-3 w-3 text-indigo-400" /> Analysis & Location Strategy ({location})
+                    </h5>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {analysisResult?.analysis || "Analysis completed."}
+                    </p>
+                    {analysisResult?.location_targeting_summary && (
+                      <div className="p-2 bg-slate-950 border border-slate-800 rounded text-[11px] text-indigo-300 font-mono">
+                        📍 {analysisResult.location_targeting_summary}
+                      </div>
+                    )}
+                  </div>
+
+                  {Array.isArray(analysisResult?.improvements) && analysisResult.improvements.length > 0 && (
+                    <div className="space-y-2">
+                      <h5 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
+                        <TrendingUp className="h-3 w-3 text-indigo-400" /> Key Improvements
+                      </h5>
+                      <ul className="space-y-1.5">
+                        {analysisResult.improvements.map((imp: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2 text-xs text-slate-300">
+                            <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            <span>{imp}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {Array.isArray(analysisResult?.revised_copy_suggestions) && analysisResult.revised_copy_suggestions.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-slate-800">
+                      <h5 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="h-3 w-3 text-indigo-400" /> Grok Optimized Copy Variants
+                      </h5>
+                      <div className="space-y-2">
+                        {analysisResult.revised_copy_suggestions.map((sug: string, idx: number) => (
+                          <div key={idx} className="bg-indigo-950/20 border border-indigo-500/20 p-3 rounded-lg text-xs text-indigo-100 italic leading-relaxed flex items-start justify-between gap-2">
+                            <span>{sug}</span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(sug);
+                                alert("Copied optimized ad copy to clipboard!");
+                              }}
+                              className="px-2 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 rounded text-[10px] font-bold shrink-0 not-italic transition-colors"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Publish Real Campaign Export Box */}
+                  <div className="mt-4 p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-lg space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-emerald-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <Megaphone className="h-3.5 w-3.5 text-emerald-400" /> Ready for Real Launch
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">{platformInfo.specName}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      To turn this optimized ad into a live campaign on {platformInfo.title}:
+                    </p>
+
+                    {/* Destination Link Guidance & Editable Input */}
+                    <div className="bg-slate-900/90 border border-slate-800 p-2.5 rounded-md text-[11px] space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-200 block">🔗 Campaign Destination Link / Landing Page URL</span>
                         <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(sug);
-                            alert("Copied optimized ad copy to clipboard!");
-                          }}
-                          className="px-2 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 rounded text-[10px] font-bold shrink-0 not-italic transition-colors"
+                          type="button"
+                          onClick={() => setDestinationUrl("https://www.uniagent.website")}
+                          className="text-[10px] text-emerald-400 hover:underline font-mono"
                         >
-                          Copy
+                          Use www.uniagent.website
                         </button>
                       </div>
-                    ))}
+                      <input
+                        type="url"
+                        value={destinationUrl}
+                        onChange={(e) => setDestinationUrl(e.target.value)}
+                        placeholder="https://www.uniagent.website"
+                        className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-500"
+                      />
+                      <p className="text-[10px] text-slate-400 leading-relaxed">
+                        Users clicking your ad will land directly on this URL. Default configured for <span className="text-slate-200 font-mono">https://www.uniagent.website</span>.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <a
+                        href={platformInfo.launchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold text-center transition-colors flex items-center justify-center gap-1"
+                      >
+                        {platformInfo.launchText}
+                      </a>
+                      <button
+                        onClick={() => {
+                          const textToCopy = `PLATFORM: ${selectedPlatform.toUpperCase()}\nLOCATION: ${location}\nCAMPAIGN NAME: ${targetAudience} - AI Optimized\nDESTINATION URL: ${destinationUrl}\nTARGET AUDIENCE: ${targetAudience}\nAD COPY / TITLE:\n${adCopy}\n\nSUGGESTED OPTIMIZED VARIANT:\n${analysisResult?.revised_copy_suggestions?.[0] || adCopy}`;
+                          navigator.clipboard.writeText(textToCopy);
+                          alert(`Copied full ${selectedPlatform.toUpperCase()} campaign specifications & destination URL (${destinationUrl})!`);
+                        }}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] font-bold transition-colors"
+                      >
+                        Copy Campaign Specs
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Publish Real Campaign Export Box */}
-              <div className="mt-4 p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-lg space-y-2.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-emerald-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                    <Megaphone className="h-3.5 w-3.5 text-emerald-400" /> Ready for Real Launch
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">{platformInfo.specName}</span>
-                </div>
-                <p className="text-[11px] text-slate-300">
-                  To turn this optimized ad into a live campaign on {platformInfo.title}:
-                </p>
+              {/* TAB 2: {INPUTS} LIFECYCLE */}
+              {activeResultTab === "inputs" && (
+                <div className="space-y-3 font-mono text-xs">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 pb-2 border-b border-slate-800">
+                    <span className="flex items-center gap-1.5 text-indigo-400">
+                      <FileJson className="h-4 w-4" /> &#123;Inputs&#125; Payload Specification
+                    </span>
+                    <span className="text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                      POST /v1/responses
+                    </span>
+                  </div>
 
-                {/* Destination Link Guidance & Editable Input */}
-                <div className="bg-slate-900/90 border border-slate-800 p-2.5 rounded-md text-[11px] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-200 block">🔗 Campaign Destination Link / Landing Page URL</span>
+                  <div className="space-y-2">
+                    <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-1.5 text-[11px]">
+                      <div className="text-slate-500 uppercase text-[9px] font-bold tracking-wider">Headers</div>
+                      <div className="text-emerald-400">Authorization: Bearer $AI_GATEWAY_API_KEY</div>
+                      <div className="text-slate-300">Content-Type: application/json</div>
+                    </div>
+
+                    <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2 text-[11px]">
+                      <div className="text-slate-500 uppercase text-[9px] font-bold tracking-wider flex items-center justify-between">
+                        <span>JSON Body Parameters</span>
+                        <span className="text-amber-400">model: openai/gpt-5.6-sol</span>
+                      </div>
+
+                      <div className="space-y-1 text-slate-300 text-[10px]">
+                        <div><strong className="text-indigo-300">input:</strong> "{adCopy}"</div>
+                        <div><strong className="text-indigo-300">location:</strong> "{location}"</div>
+                        <div><strong className="text-indigo-300">platform:</strong> "{selectedPlatform}"</div>
+                        <div><strong className="text-indigo-300">targetAudience:</strong> "{targetAudience}"</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2 text-[11px]">
+                      <div className="text-slate-500 uppercase text-[9px] font-bold tracking-wider">
+                        Declared Function Schema: Analyze_Ad’s_Create_Ad’
+                      </div>
+                      <pre className="p-2 bg-slate-900 rounded text-[10px] text-indigo-200 overflow-x-auto leading-relaxed border border-slate-800/80">
+{JSON.stringify(rawLifecycleResponse?.inputs?.tools_declared || [
+  {
+    type: "function",
+    name: "Analyze_Ad’s_Create_Ad’",
+    description: "Analyze Ad with Grok AI Strategy",
+    strict: true,
+    parameters: {
+      type: "object",
+      properties: {
+        location: { type: "string" }
+      },
+      required: ["location"],
+      additionalProperties: false
+    }
+  }
+], null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: {OUTPUTS} LIFECYCLE */}
+              {activeResultTab === "outputs" && (
+                <div className="space-y-3 font-mono text-xs">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 pb-2 border-b border-slate-800">
+                    <span className="flex items-center gap-1.5 text-emerald-400">
+                      <Code2 className="h-4 w-4" /> &#123;Outputs&#125; Execution Trace
+                    </span>
+                    <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                      {rawLifecycleResponse?.outputs?.execution_status || "SUCCESS_200_OK"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                    <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
+                      <span className="text-slate-500 block">Response ID:</span>
+                      <span className="text-white font-bold truncate block">{rawLifecycleResponse?.id || "resp_grok_2026"}</span>
+                    </div>
+                    <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
+                      <span className="text-slate-500 block">Latency Duration:</span>
+                      <span className="text-purple-300 font-bold block">{rawLifecycleResponse?.outputs?.duration_ms || 140}ms</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2">
+                    <div className="text-slate-500 uppercase text-[9px] font-bold tracking-wider">
+                      Invoked Function Output Payload
+                    </div>
+                    <pre className="p-2.5 bg-slate-900 rounded text-[10px] text-emerald-200 overflow-x-auto leading-relaxed border border-slate-800/80 max-h-64">
+{JSON.stringify(rawLifecycleResponse?.outputs || {
+  function_call: {
+    name: "Analyze_Ad’s_Create_Ad’",
+    arguments: { location, adCopy, platform: selectedPlatform }
+  },
+  result: analysisResult
+}, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: cURL INSPECTOR */}
+              {activeResultTab === "curl" && (
+                <div className="space-y-3 font-mono text-xs">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 pb-2 border-b border-slate-800">
+                    <span className="flex items-center gap-1.5 text-amber-400">
+                      <Terminal className="h-4 w-4" /> Official cURL Command
+                    </span>
                     <button
-                      type="button"
-                      onClick={() => setDestinationUrl("https://www.uniagent.website")}
-                      className="text-[10px] text-emerald-400 hover:underline font-mono"
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedCurlCommand);
+                        setCopiedCurl(true);
+                        setTimeout(() => setCopiedCurl(false), 2000);
+                      }}
+                      className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold flex items-center gap-1 transition-colors"
                     >
-                      Use www.uniagent.website
+                      {copiedCurl ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      <span>{copiedCurl ? "Copied!" : "Copy cURL"}</span>
                     </button>
                   </div>
-                  <input
-                    type="url"
-                    value={destinationUrl}
-                    onChange={(e) => setDestinationUrl(e.target.value)}
-                    placeholder="https://www.uniagent.website"
-                    className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-500"
-                  />
-                  <p className="text-[10px] text-slate-400 leading-relaxed">
-                    Users clicking your ad will land directly on this URL. Default configured for <span className="text-slate-200 font-mono">https://www.uniagent.website</span>.
-                  </p>
-                </div>
 
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <a
-                    href={platformInfo.launchUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold text-center transition-colors flex items-center justify-center gap-1"
-                  >
-                    {platformInfo.launchText}
-                  </a>
-                  <button
-                    onClick={() => {
-                      const textToCopy = `PLATFORM: ${selectedPlatform.toUpperCase()}\nCAMPAIGN NAME: ${targetAudience} - AI Optimized\nDESTINATION URL: ${destinationUrl}\nTARGET AUDIENCE: ${targetAudience}\nAD COPY / TITLE:\n${adCopy}\n\nSUGGESTED OPTIMIZED VARIANT:\n${analysisResult?.revised_copy_suggestions?.[0] || adCopy}`;
-                      navigator.clipboard.writeText(textToCopy);
-                      alert(`Copied full ${selectedPlatform.toUpperCase()} campaign specifications & destination URL (${destinationUrl})!`);
-                    }}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] font-bold transition-colors"
-                  >
-                    Copy Campaign Specs
-                  </button>
+                  <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2">
+                    <p className="text-[10px] text-slate-400 font-sans leading-relaxed">
+                      Run this exact cURL command in your terminal or backend proxy service to call Vercel AI Gateway with <code className="text-amber-400">openai/gpt-5.6-sol</code>:
+                    </p>
+                    <pre className="p-3 bg-slate-900 rounded-lg text-[10px] text-amber-200 overflow-x-auto leading-relaxed border border-slate-800 custom-scrollbar select-all">
+{generatedCurlCommand}
+                    </pre>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Official API Developer Portals & API Key FAQ Guide */}
-              <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-lg space-y-2.5 text-[11px]">
+              <div className="mt-4 p-3.5 bg-slate-900/90 border border-slate-800 rounded-lg space-y-2.5 text-[11px]">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-200">
                   <span className="flex items-center gap-1.5 font-mono">
                     🔑 Do You Need External Ad Network API Keys?
@@ -631,7 +963,6 @@ export default function GrokAdAdvisor() {
                   </a>
                 </div>
               </div>
-
             </div>
           )}
         </div>

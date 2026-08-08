@@ -64,7 +64,20 @@ export default function GatewayStatus({ forceShow, className = "" }: GatewayStat
 
   const [isDevVisible, setIsDevVisible] = useState<boolean>(true);
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "benchmark" | "providers">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "benchmark" | "providers" | "diagnostics">("overview");
+
+  // Local Session Diagnostics Log State
+  interface SessionLogEntry {
+    id: string;
+    timestamp: string;
+    endpoint: string;
+    statusCode: number;
+    durationMs: number;
+    model: string;
+    statusText: string;
+    ok: boolean;
+  }
+  const [sessionLogs, setSessionLogs] = useState<SessionLogEntry[]>([]);
 
   // Gateway Telemetry State
   const [selectedModel, setSelectedModel] = useState<string>("gpt-5.4");
@@ -119,6 +132,21 @@ export default function GatewayStatus({ forceShow, className = "" }: GatewayStat
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Helper to record diagnostic logs
+  const logDiagnostic = (endpoint: string, statusCode: number, durationMs: number, model: string, statusText: string, ok: boolean) => {
+    const entry: SessionLogEntry = {
+      id: Math.random().toString(36).substring(2, 9),
+      timestamp: new Date().toLocaleTimeString(),
+      endpoint,
+      statusCode,
+      durationMs,
+      model,
+      statusText,
+      ok
+    };
+    setSessionLogs((prev) => [entry, ...prev.slice(0, 29)]);
+  };
+
   // Fetch Gateway Model Status & Run Ping
   const pingGateway = async (modelToTest = selectedModel) => {
     setIsPinging(true);
@@ -127,6 +155,8 @@ export default function GatewayStatus({ forceShow, className = "" }: GatewayStat
       const res = await fetch("/api/gateway/models");
       const endTime = performance.now();
       const elapsed = Math.round(endTime - startTime);
+
+      logDiagnostic("/api/gateway/models", res.status, elapsed, modelToTest, res.statusText || (res.ok ? "OK" : "Error"), res.ok);
 
       if (res.ok) {
         const data = await safeResponseJson(res);
@@ -139,7 +169,10 @@ export default function GatewayStatus({ forceShow, className = "" }: GatewayStat
       } else {
         setLatencyMs(elapsed);
       }
-    } catch {
+    } catch (err: any) {
+      const endTime = performance.now();
+      const elapsed = Math.round(endTime - startTime);
+      logDiagnostic("/api/gateway/models", 0, elapsed, modelToTest, err?.message || "Network Error", false);
       setLatencyMs(null);
     } finally {
       setIsPinging(false);
@@ -181,6 +214,8 @@ export default function GatewayStatus({ forceShow, className = "" }: GatewayStat
       setLatencyHistory((prev) => [...prev.slice(-9), elapsed]);
       setLastChecked(new Date());
 
+      logDiagnostic("/api/gateway/generate", res.status, elapsed, selectedModel, res.statusText || (res.ok ? "OK" : "Error"), res.ok);
+
       const data = await safeResponseJson(res);
       if (!res.ok || !data) {
         throw new Error((data && (data.details || data.error)) || `HTTP status ${res.status}`);
@@ -207,6 +242,11 @@ export default function GatewayStatus({ forceShow, className = "" }: GatewayStat
       }
       setTotalRequests((prev) => prev + 1);
     } catch (err: any) {
+      const endTime = performance.now();
+      const elapsed = Math.round(endTime - startTime);
+      if (!sessionLogs.some((l) => l.durationMs === elapsed)) {
+        logDiagnostic("/api/gateway/generate", 0, elapsed, selectedModel, err?.message || "Error", false);
+      }
       setTestError(err?.message || "Failed to query Vercel AI Gateway.");
     } finally {
       setIsTesting(false);
@@ -323,6 +363,21 @@ export default function GatewayStatus({ forceShow, className = "" }: GatewayStat
               }`}
             >
               Providers
+            </button>
+            <button
+              onClick={() => setActiveTab("diagnostics")}
+              className={`flex-1 py-1.5 text-center font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
+                activeTab === "diagnostics"
+                  ? "bg-purple-600/30 text-purple-200 border border-purple-500/40"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>Logs</span>
+              {sessionLogs.length > 0 && (
+                <span className="text-[9px] bg-purple-500/30 text-purple-200 px-1 rounded font-bold">
+                  {sessionLogs.length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -505,6 +560,60 @@ export default function GatewayStatus({ forceShow, className = "" }: GatewayStat
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* TAB 4: DIAGNOSTICS LOGS */}
+          {activeTab === "diagnostics" && (
+            <div className="p-3 space-y-2 font-mono text-xs max-h-64 overflow-y-auto">
+              <div className="flex items-center justify-between text-[10px] text-slate-400 uppercase font-bold">
+                <span>Session Diagnostic Log</span>
+                <button
+                  onClick={() => setSessionLogs([])}
+                  className="text-slate-500 hover:text-red-400 text-[10px] transition-colors"
+                >
+                  Clear Logs
+                </button>
+              </div>
+
+              {sessionLogs.length === 0 ? (
+                <div className="p-4 text-center text-slate-500 text-[11px] bg-slate-950/40 rounded-xl border border-slate-800">
+                  No session logs captured yet. Ping or test a route to log response diagnostics.
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {sessionLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className={`p-2 rounded-xl border text-[10px] flex items-center justify-between ${
+                        log.ok
+                          ? "bg-slate-950/80 border-slate-800/80 text-slate-300"
+                          : "bg-red-950/30 border-red-500/30 text-red-200"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <span
+                          className={`px-1.5 py-0.5 rounded font-bold text-[9px] ${
+                            log.ok
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                              : "bg-red-500/20 text-red-300 border border-red-500/30"
+                          }`}
+                        >
+                          {log.statusCode || "ERR"}
+                        </span>
+                        <div className="truncate">
+                          <div className="font-bold text-white truncate">{log.endpoint}</div>
+                          <div className="text-[9px] text-slate-400">{log.model} • {log.statusText}</div>
+                        </div>
+                      </div>
+                      <div className="text-right ml-2 shrink-0">
+                        <div className="text-purple-300 font-bold">{log.durationMs}ms</div>
+                        <div className="text-[9px] text-slate-500">{log.timestamp}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
